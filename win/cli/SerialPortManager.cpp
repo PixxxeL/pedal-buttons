@@ -15,11 +15,44 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
+typedef int (WINAPI *MessageBoxTimeoutA_t)(HWND, LPCSTR, LPCSTR, UINT, WORD, DWORD);
+
+class CooldownMessageBox {
+private:
+    static constexpr DWORD TIMEOUT_MS = 3000;
+    static inline bool isOpen = false;
+    static inline bool inCooldown = false;
+
+public:
+    static void show(const std::string& text) {
+        if (isOpen || inCooldown) return;
+
+        HMODULE hUser32 = LoadLibraryA("user32.dll");
+        if (!hUser32) return;
+
+        auto pMsgBox = (MessageBoxTimeoutA_t)GetProcAddress(hUser32, "MessageBoxTimeoutA");
+        if (!pMsgBox) { FreeLibrary(hUser32); return; }
+
+        isOpen = true;
+        inCooldown = true;
+
+        std::thread([] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(TIMEOUT_MS));
+            inCooldown = false;
+        }).detach();
+
+        pMsgBox(NULL, text.c_str(), "Pedal Buttons", MB_OK | MB_ICONERROR, 0, 0);
+        isOpen = false;
+        FreeLibrary(hUser32);
+    }
+};
+
 static std::string toEventKey(const std::string& line) {
-    std::string upper = line;
-    std::transform(upper.begin(), upper.end(), upper.begin(),
+    std::string result = line;
+    std::transform(result.begin(), result.end(), result.begin(),
         [](unsigned char c) { return std::toupper(c); });
-    return upper;
+    std::replace(result.begin(), result.end(), '-', '_');
+    return result;
 }
 
 void SerialPortManager::readFormPort(std::string portName, const Config& config) {
@@ -81,6 +114,7 @@ static std::string findConfigFile(const std::string& userPath) {
     if (!userPath.empty()) {
         if (fs::exists(userPath)) return userPath;
         BOOST_LOG_TRIVIAL(error) << "Файл конфигурации не найден: " << userPath;
+        CooldownMessageBox::show("Файл конфигурации не найден:\n" + userPath);
         return "";
     }
 
@@ -97,6 +131,7 @@ static std::string findConfigFile(const std::string& userPath) {
 
     BOOST_LOG_TRIVIAL(error) << "Файл конфигурации не найден ни рядом с exe (" << exeDir
               << "), ни в рабочей папке (" << fs::current_path() << ")";
+    CooldownMessageBox::show("Файл pedal-buttons.ini не найден\nни рядом с exe, ни в рабочей папке.");
     return "";
 }
 
@@ -112,6 +147,7 @@ void SerialPortManager::run(unsigned int argc, char** argv) {
     std::string iniFile = findConfigFile(SerialPortManager::configPath);
     if (iniFile.empty() || !config.load(iniFile)) {
         BOOST_LOG_TRIVIAL(error) << "Конфигурация не загружена. Работа невозможна.";
+        CooldownMessageBox::show("Конфигурация не загружена.\nРабота невозможна.");
         return;
     }
 
