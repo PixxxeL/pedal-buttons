@@ -33,16 +33,6 @@ void SerialPortManager::readFormPort(std::string portName) {
                 continue;
             }
             std::cout << "\rПолучен ответ от Arduino: " << line << std::flush;
-            int value = 0;
-            try {
-                value = std::stoi(line);
-            }
-            catch (...) {}
-            if (value > 500 && value < 600) {
-                std::cout << "\nПолучена команда завершения\nРазорвано соединение с Arduino" << std::endl;
-                port.disconnect();
-                return;
-            }
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
         }
         std::cout << "\nРазорвано соединение со стороны Arduino" << std::endl;

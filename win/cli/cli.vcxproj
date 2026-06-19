@@ -135,12 +135,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="IniParser.cpp" />
     <ClCompile Include="logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SerialPort.cpp" />
     <ClCompile Include="SerialPortManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IniParser.h" />
     <ClInclude Include="logger.h" />
     <ClInclude Include="SerialPort.h" />
     <ClInclude Include="SerialPortManager.h" />
