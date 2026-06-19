@@ -1,4 +1,5 @@
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -6,9 +7,11 @@
 #include <boost/program_options.hpp>
 #include "SerialPortManager.h"
 #include "SerialPort.h"
+#include "Config.h"
+#include "KeySender.h"
 #include "logger.h"
 
-
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 void SerialPortManager::readFormPort(std::string portName) {
@@ -60,12 +63,45 @@ std::string SerialPortManager::printPortsList(int maxPort) {
     return "";
 }
 
+static std::string findConfigFile(const std::string& userPath) {
+    if (!userPath.empty()) {
+        if (fs::exists(userPath)) return userPath;
+        std::cerr << "Файл конфигурации не найден: " << userPath << std::endl;
+        return "";
+    }
+
+    const std::string iniName = "pedal-buttons.ini";
+
+    char exePath[MAX_PATH] = { 0 };
+    GetModuleFileNameA(NULL, exePath, MAX_PATH);
+    fs::path exeDir = fs::path(exePath).parent_path();
+    fs::path byExe = exeDir / iniName;
+    if (fs::exists(byExe)) return byExe.string();
+
+    fs::path byCwd = fs::current_path() / iniName;
+    if (fs::exists(byCwd)) return byCwd.string();
+
+    std::cerr << "Файл конфигурации не найден ни рядом с exe (" << exeDir << "),\n"
+              << "ни в рабочей папке (" << fs::current_path() << ")" << std::endl;
+    return "";
+}
+
 void SerialPortManager::run(unsigned int argc, char** argv) {
     SerialPortManager::parseArgs(argc, argv);
     initLogging("pedal-buttons.log");
+
     if (SerialPortManager::isShowList) {
         SerialPortManager::printPortsList(SerialPortManager::portCount);
     }
+
+    Config config;
+    std::string iniFile = findConfigFile(SerialPortManager::configPath);
+    if (iniFile.empty() || !config.load(iniFile)) {
+        std::cerr << "Конфигурация не загружена. Работа невозможна." << std::endl;
+        return;
+    }
+
+    std::cout << "Загружен конфиг: " << iniFile << ", приложение: " << config.getAppName() << std::endl;
     SerialPortManager::readFormPort("COM" + std::to_string(SerialPortManager::port));
 }
 
@@ -83,6 +119,9 @@ void SerialPortManager::parseArgs(unsigned int argc, char** argv) {
             ->default_value(9)
             ->notifier(SerialPortManager::validatePort),
             "Номер порта для подключения (от 1 до portCount)")
+        ("ini,i", po::value<std::string>(&SerialPortManager::configPath)
+            ->default_value(""),
+            "Путь к файлу конфигурации .ini")
         ;
     po::variables_map vm;
     try {
@@ -123,3 +162,4 @@ void SerialPortManager::validatePort(unsigned int value) {
 bool SerialPortManager::isShowList = false;
 unsigned int SerialPortManager::portCount = 9;
 unsigned int SerialPortManager::port = 9;
+std::string SerialPortManager::configPath = "";

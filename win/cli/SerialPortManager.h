@@ -6,13 +6,13 @@
 class SerialPortManager
 {
 private:
-	// Запрет на создание объектов
 	SerialPortManager() = delete;
 
 protected:
 	static bool isShowList;
 	static unsigned int portCount;
 	static unsigned int port;
+	static std::string configPath;
 
 public:
 	static void run(unsigned int argc, char** argv);
