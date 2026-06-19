@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <boost/program_options.hpp>
+#include <boost/log/trivial.hpp>
 #include "SerialPortManager.h"
 #include "SerialPort.h"
 #include "Config.h"
@@ -14,12 +15,19 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-void SerialPortManager::readFormPort(std::string portName) {
+static std::string toEventKey(const std::string& line) {
+    std::string upper = line;
+    std::transform(upper.begin(), upper.end(), upper.begin(),
+        [](unsigned char c) { return std::toupper(c); });
+    return upper;
+}
+
+void SerialPortManager::readFormPort(std::string portName, const Config& config) {
     SerialPort port;
     DWORD bytesRead = 0;
     uint8_t byte;
     if (port.connect(portName)) {
-        std::cout << "Подключен к Arduino на порту: " << portName << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "Подключен к Arduino на порту: " << portName;
         while (port.isConnected()) {
             std::string line;
             while (port.isConnected()) {
@@ -35,15 +43,21 @@ void SerialPortManager::readFormPort(std::string portName) {
             if (line.empty()) {
                 continue;
             }
-            std::cout << "\rПолучен ответ от Arduino: " << line << std::flush;
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            BOOST_LOG_TRIVIAL(debug) << "Пакет от Arduino: " << line;
+
+            std::string eventKey = toEventKey(line);
+            auto keys = config.getKeys(eventKey);
+            if (!keys.empty()) {
+                BOOST_LOG_TRIVIAL(info) << "Отправка клавиш для [" << eventKey << "]";
+                KeySender::send(keys);
+            } else {
+                BOOST_LOG_TRIVIAL(warning) << "Неизвестное событие или нет привязки: " << line;
+            }
         }
-        std::cout << "\nРазорвано соединение со стороны Arduino" << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "Разорвано соединение со стороны Arduino";
     }
     else {
-        std::cout << "На порту " << portName << " невозможно подключиться к Arduino." << std::endl;
-        std::cout << "Попробуйте установить другой порт параметром -p" << std::endl;
-        std::cout << "и подключить Arduino." << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "На порту " << portName << " невозможно подключиться к Arduino.";
     }
 }
 
@@ -66,7 +80,7 @@ std::string SerialPortManager::printPortsList(int maxPort) {
 static std::string findConfigFile(const std::string& userPath) {
     if (!userPath.empty()) {
         if (fs::exists(userPath)) return userPath;
-        std::cerr << "Файл конфигурации не найден: " << userPath << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Файл конфигурации не найден: " << userPath;
         return "";
     }
 
@@ -81,8 +95,8 @@ static std::string findConfigFile(const std::string& userPath) {
     fs::path byCwd = fs::current_path() / iniName;
     if (fs::exists(byCwd)) return byCwd.string();
 
-    std::cerr << "Файл конфигурации не найден ни рядом с exe (" << exeDir << "),\n"
-              << "ни в рабочей папке (" << fs::current_path() << ")" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "Файл конфигурации не найден ни рядом с exe (" << exeDir
+              << "), ни в рабочей папке (" << fs::current_path() << ")";
     return "";
 }
 
@@ -97,12 +111,12 @@ void SerialPortManager::run(unsigned int argc, char** argv) {
     Config config;
     std::string iniFile = findConfigFile(SerialPortManager::configPath);
     if (iniFile.empty() || !config.load(iniFile)) {
-        std::cerr << "Конфигурация не загружена. Работа невозможна." << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Конфигурация не загружена. Работа невозможна.";
         return;
     }
 
-    std::cout << "Загружен конфиг: " << iniFile << ", приложение: " << config.getAppName() << std::endl;
-    SerialPortManager::readFormPort("COM" + std::to_string(SerialPortManager::port));
+    BOOST_LOG_TRIVIAL(info) << "Загружен конфиг: " << iniFile << ", приложение: " << config.getAppName();
+    SerialPortManager::readFormPort("COM" + std::to_string(SerialPortManager::port), config);
 }
 
 void SerialPortManager::parseArgs(unsigned int argc, char** argv) {
@@ -133,7 +147,7 @@ void SerialPortManager::parseArgs(unsigned int argc, char** argv) {
         }
     }
     catch (const std::exception& e) {
-        std::cerr << "Ошибка: " << e.what() << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Ошибка: " << e.what();
         std::cout << desc << std::endl;
         return;
     }

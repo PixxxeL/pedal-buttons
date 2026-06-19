@@ -1,21 +1,21 @@
 #include "Config.h"
-#include <iostream>
+#include <boost/log/trivial.hpp>
 
 
 bool Config::load(const std::string& filePath) {
     if (!ini.load(filePath)) {
-        std::cerr << "Не удалось загрузить конфиг: " << filePath << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Не удалось загрузить конфиг: " << filePath;
         return false;
     }
 
     appName = ini.getString("app", "app");
     if (appName.empty()) {
-        std::cerr << "Секция [app] не найдена или пуста" << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Секция [app] не найдена или пуста";
         return false;
     }
 
     if (!ini.hasSection(appName)) {
-        std::cerr << "Секция [" << appName << "] не найдена в конфиге" << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Секция [" << appName << "] не найдена в конфиге";
         return false;
     }
 

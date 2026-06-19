@@ -21,8 +21,8 @@ void initLogging(const std::string fileName) {
     );
     // to file
     if (fileName != "") {
-        fs::path exePath = boost::dll::program_location();
-        boost::filesystem::path filePath = exePath / "pedal-buttons.log";
+        fs::path exeDir = boost::dll::program_location().parent_path();
+        boost::filesystem::path filePath = exeDir / fileName;
         auto fileHandler = logging::add_file_log(
             keywords::file_name = filePath.string(),
             keywords::rotation_size = 10 * 1024 * 1024,
