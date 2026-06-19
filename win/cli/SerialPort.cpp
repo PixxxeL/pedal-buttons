@@ -38,8 +38,8 @@ bool SerialPort::connect(const std::string& portName, DWORD baudRate) { //CBR_11
 
     COMMTIMEOUTS timeouts = { 0 };
     timeouts.ReadIntervalTimeout = MAXDWORD;
-    timeouts.ReadTotalTimeoutMultiplier = 0;
-    timeouts.ReadTotalTimeoutConstant = 0;
+    timeouts.ReadTotalTimeoutMultiplier = MAXDWORD;
+    timeouts.ReadTotalTimeoutConstant = 100;
     if (!SetCommTimeouts(hSerial, &timeouts)) {
         CloseHandle(hSerial);
         return false;
