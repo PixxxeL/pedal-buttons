@@ -155,6 +155,9 @@
     <ClInclude Include="SerialPort.h" />
     <ClInclude Include="SerialPortManager.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="cli.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>
