@@ -56,7 +56,7 @@ static std::string toEventKey(const std::string& line) {
     return result;
 }
 
-void SerialPortManager::readFormPort(std::string portName, const Config& config) {
+void SerialPortManager::readFormPort(std::string portName, const std::string& configPath) {
     SerialPort port;
     DWORD bytesRead = 0;
     uint8_t byte;
@@ -78,6 +78,12 @@ void SerialPortManager::readFormPort(std::string portName, const Config& config)
                 continue;
             }
             BOOST_LOG_TRIVIAL(debug) << "Пакет от Arduino: " << line;
+
+            Config config;
+            if (!config.load(configPath)) {
+                BOOST_LOG_TRIVIAL(warning) << "Не удалось перечитать конфиг";
+                continue;
+            }
 
             std::string eventKey = toEventKey(line);
             auto keys = config.getKeys(eventKey);
@@ -198,7 +204,7 @@ void SerialPortManager::run(unsigned int argc, char** argv) {
     }
 
     BOOST_LOG_TRIVIAL(info) << "Загружен конфиг: " << iniFile << ", приложение: " << config.getAppName();
-    SerialPortManager::readFormPort("COM" + std::to_string(SerialPortManager::port), config);
+    SerialPortManager::readFormPort("COM" + std::to_string(SerialPortManager::port), iniFile);
 }
 
 void SerialPortManager::parseArgs(unsigned int argc, char** argv) {
