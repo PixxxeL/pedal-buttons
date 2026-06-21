@@ -1,5 +1,6 @@
-$versionFile = Join-Path $PSScriptRoot "version.h"
-$outputFile = Join-Path $PSScriptRoot "version.props"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$versionFile = Join-Path $scriptDir "version.h"
+$outputFile = Join-Path $scriptDir "version.props"
 
 $content = Get-Content $versionFile -Raw
 if ($content -match 'PEDAL_BUTTONS_VERSION\s+"([^"]+)"') {
