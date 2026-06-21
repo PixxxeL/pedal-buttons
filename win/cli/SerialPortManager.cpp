@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <set>
 #include <string>
 #include <thread>
 #include <boost/program_options.hpp>
@@ -81,7 +82,12 @@ void SerialPortManager::readFormPort(std::string portName, const Config& config)
             std::string eventKey = toEventKey(line);
             auto keys = config.getKeys(eventKey);
             if (!keys.empty()) {
-                BOOST_LOG_TRIVIAL(info) << "Отправка клавиш для [" << eventKey << "]";
+                std::string keysStr;
+                for (size_t i = 0; i < keys.size(); i++) {
+                    if (i > 0) keysStr += "+";
+                    keysStr += keys[i];
+                }
+                BOOST_LOG_TRIVIAL(info) << "Отправка клавиш: " << keysStr;
                 KeySender::send(keys);
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "Неизвестное событие или нет привязки: " << line;
@@ -94,14 +100,54 @@ void SerialPortManager::readFormPort(std::string portName, const Config& config)
     }
 }
 
-std::string SerialPortManager::printPortsList(int maxPort) {
-    std::cout << "Доступные [x] COM-порты:" << std::endl;
+static std::set<std::string> getActivePortsViaCreateFile(int maxPort) {
+    std::set<std::string> active;
     for (int i = 1; i <= maxPort; i++) {
         std::string portName = "COM" + std::to_string(i);
-        SerialPort testedPort;
-        if (testedPort.connect(portName)) {
+        std::string fullPath = "\\\\.\\" + portName;
+        HANDLE h = CreateFileA(fullPath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+        if (h != INVALID_HANDLE_VALUE) {
+            CloseHandle(h);
+            active.insert(portName);
+        }
+    }
+    return active;
+}
+
+static std::set<std::string> getActivePortsViaRegistry() {
+    std::set<std::string> active;
+    HKEY hKey;
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        char valueName[256];
+        DWORD valueNameSize;
+        char valueData[256];
+        DWORD valueDataSize;
+        DWORD index = 0;
+        while (true) {
+            valueNameSize = sizeof(valueName);
+            valueDataSize = sizeof(valueData);
+            DWORD type;
+            if (RegEnumValueA(hKey, index++, valueName, &valueNameSize, NULL, &type, (LPBYTE)valueData, &valueDataSize) != ERROR_SUCCESS) break;
+            if (type == REG_SZ) {
+                std::string port(valueData, valueDataSize > 0 ? valueDataSize - 1 : 0);
+                active.insert(port);
+            }
+        }
+        RegCloseKey(hKey);
+    }
+    return active;
+}
+
+std::string SerialPortManager::printPortsList(int maxPort) {
+    std::cout << "Доступные [x] COM-порты:" << std::endl;
+
+    // auto activePorts = getActivePortsViaCreateFile(maxPort);
+    auto activePorts = getActivePortsViaRegistry();
+
+    for (int i = 1; i <= maxPort; i++) {
+        std::string portName = "COM" + std::to_string(i);
+        if (activePorts.count(portName)) {
             std::cout << "[x] " << portName << std::endl;
-            testedPort.disconnect();
         }
         else {
             std::cout << "[ ] " << portName << std::endl;
