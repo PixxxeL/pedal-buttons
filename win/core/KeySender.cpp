@@ -6,6 +6,9 @@
 #include <cctype>
 #include <chrono>
 #include <thread>
+#include <vector>
+
+#include "Logger.h"
 
 
 namespace core {
@@ -14,18 +17,59 @@ namespace {
 
 constexpr std::chrono::milliseconds chordGap{20};
 
-INPUT makeKeyInput(WORD virtualKey, DWORD flags) {
-    INPUT input = {};
-    input.type = INPUT_KEYBOARD;
-    input.ki.wVk = virtualKey;
-    input.ki.dwFlags = flags;
-    return input;
+struct Stroke {
+    WORD scanCode = 0;
+    WORD virtualKey = 0;
+    bool extended = false;
+    bool valid = false;
+};
+
+HKL referenceLayout() {
+    static const HKL layout = [] {
+        HKL loaded = LoadKeyboardLayoutW(L"00000409", KLF_NOTELLSHELL);
+        if (loaded == nullptr) {
+            LOG_WARNING << "Не удалось загрузить раскладку US, используется текущая";
+            loaded = GetKeyboardLayout(0);
+        }
+        return loaded;
+    }();
+    return layout;
+}
+
+bool isAlwaysExtended(int virtualKey) {
+    switch (virtualKey) {
+        case VK_INSERT:
+        case VK_DELETE:
+        case VK_HOME:
+        case VK_END:
+        case VK_PRIOR:
+        case VK_NEXT:
+        case VK_LEFT:
+        case VK_RIGHT:
+        case VK_UP:
+        case VK_DOWN:
+        case VK_NUMLOCK:
+        case VK_SNAPSHOT:
+        case VK_DIVIDE:
+        case VK_RCONTROL:
+        case VK_RMENU:
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool isModifierKey(const std::string& key) {
     return key == "ctrl" || key == "control" ||
         key == "alt" || key == "menu" ||
         key == "shift";
+}
+
+std::string toLower(const std::string& text) {
+    std::string result = text;
+    std::transform(result.begin(), result.end(), result.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return result;
 }
 
 const std::unordered_map<int, std::string>& canonicalNames() {
@@ -47,16 +91,74 @@ const std::unordered_map<int, std::string>& canonicalNames() {
     return names;
 }
 
-std::string toLower(const std::string& text) {
-    std::string result = text;
-    std::transform(result.begin(), result.end(), result.begin(),
-        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return result;
+Stroke strokeForVirtualKey(int virtualKey) {
+    Stroke stroke;
+    stroke.virtualKey = static_cast<WORD>(virtualKey);
+
+    const UINT mapped = MapVirtualKeyExW(static_cast<UINT>(virtualKey),
+        MAPVK_VK_TO_VSC_EX, referenceLayout());
+    if (mapped == 0) {
+        return stroke;
+    }
+
+    const UINT prefix = (mapped >> 8) & 0xFF;
+    stroke.scanCode = static_cast<WORD>(mapped & 0xFF);
+    stroke.extended = prefix == 0xE0 || isAlwaysExtended(virtualKey);
+    stroke.valid = true;
+    return stroke;
+}
+
+bool resolveKey(const std::string& key, int& virtualKey, bool& needsShift) {
+    const std::string lowered = toLower(key);
+    needsShift = false;
+
+    const auto& map = KeySender::virtualKeyMap();
+    const auto it = map.find(lowered);
+    if (it != map.end()) {
+        virtualKey = it->second;
+        return true;
+    }
+
+    if (key.size() != 1) {
+        return false;
+    }
+
+    const SHORT scanned = VkKeyScanExA(key[0], referenceLayout());
+    if (scanned == -1) {
+        return false;
+    }
+
+    virtualKey = LOBYTE(scanned);
+    needsShift = (HIBYTE(scanned) & 1) != 0;
+    return true;
+}
+
+INPUT makeInput(const Stroke& stroke, bool release) {
+    INPUT input = {};
+    input.type = INPUT_KEYBOARD;
+
+    if (stroke.valid) {
+        input.ki.wVk = 0;
+        input.ki.wScan = stroke.scanCode;
+        input.ki.dwFlags = KEYEVENTF_SCANCODE;
+        if (stroke.extended) {
+            input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+        }
+    }
+    else {
+        input.ki.wVk = stroke.virtualKey;
+        input.ki.dwFlags = 0;
+    }
+
+    if (release) {
+        input.ki.dwFlags |= KEYEVENTF_KEYUP;
+    }
+    return input;
 }
 
 }
 
-const std::unordered_map<std::string, int>& KeySender::getKeyMap() {
+const std::unordered_map<std::string, int>& KeySender::virtualKeyMap() {
     static const std::unordered_map<std::string, int> keyMap = {
         {"ctrl", VK_CONTROL}, {"control", VK_CONTROL},
         {"alt", VK_MENU}, {"menu", VK_MENU},
@@ -91,7 +193,8 @@ std::string KeySender::nameForVirtualKey(int virtualKey) {
         return std::string(1, static_cast<char>(std::tolower(virtualKey)));
     }
 
-    const UINT character = MapVirtualKeyA(static_cast<UINT>(virtualKey), MAPVK_VK_TO_CHAR) & 0x7FFF;
+    const UINT character = MapVirtualKeyExW(static_cast<UINT>(virtualKey),
+        MAPVK_VK_TO_CHAR, referenceLayout()) & 0x7FFF;
     if (character >= 0x20 && character < 0x7F) {
         return std::string(1, static_cast<char>(std::tolower(static_cast<int>(character))));
     }
@@ -117,47 +220,62 @@ void KeySender::sendChord(const KeyChord& keys) {
         return;
     }
 
-    const auto& keyMap = getKeyMap();
-
-    std::vector<WORD> modifiers;
-    std::vector<WORD> regulars;
+    std::vector<Stroke> modifiers;
+    std::vector<Stroke> regulars;
+    bool shiftRequired = false;
+    bool shiftRequested = false;
 
     for (const auto& key : keys) {
-        const std::string lowered = toLower(key);
-        const auto it = keyMap.find(lowered);
-        if (it != keyMap.end()) {
-            if (isModifierKey(lowered)) {
-                modifiers.push_back(static_cast<WORD>(it->second));
-            }
-            else {
-                regulars.push_back(static_cast<WORD>(it->second));
+        int virtualKey = 0;
+        bool needsShift = false;
+
+        if (!resolveKey(key, virtualKey, needsShift)) {
+            LOG_WARNING << "Неизвестная клавиша в привязке: " << key;
+            continue;
+        }
+
+        const Stroke stroke = strokeForVirtualKey(virtualKey);
+        if (isModifierKey(toLower(key))) {
+            modifiers.push_back(stroke);
+            if (virtualKey == VK_SHIFT) {
+                shiftRequested = true;
             }
         }
-        else if (lowered.size() == 1) {
-            const WORD virtualKey = VkKeyScanA(lowered[0]) & 0xFF;
-            regulars.push_back(virtualKey);
+        else {
+            regulars.push_back(stroke);
+            shiftRequired = shiftRequired || needsShift;
         }
     }
 
-    std::vector<INPUT> inputs;
-    for (WORD virtualKey : modifiers) {
-        inputs.push_back(makeKeyInput(virtualKey, 0));
-    }
-    for (WORD virtualKey : regulars) {
-        inputs.push_back(makeKeyInput(virtualKey, 0));
-    }
-    for (WORD virtualKey : regulars) {
-        inputs.push_back(makeKeyInput(virtualKey, KEYEVENTF_KEYUP));
-    }
-    for (auto it = modifiers.rbegin(); it != modifiers.rend(); ++it) {
-        inputs.push_back(makeKeyInput(*it, KEYEVENTF_KEYUP));
+    if (shiftRequired && !shiftRequested) {
+        modifiers.push_back(strokeForVirtualKey(VK_SHIFT));
     }
 
-    if (inputs.empty()) {
+    if (modifiers.empty() && regulars.empty()) {
         return;
     }
 
-    SendInput(static_cast<UINT>(inputs.size()), inputs.data(), sizeof(INPUT));
+    std::vector<INPUT> inputs;
+    inputs.reserve((modifiers.size() + regulars.size()) * 2);
+
+    for (const auto& stroke : modifiers) {
+        inputs.push_back(makeInput(stroke, false));
+    }
+    for (const auto& stroke : regulars) {
+        inputs.push_back(makeInput(stroke, false));
+    }
+    for (auto it = regulars.rbegin(); it != regulars.rend(); ++it) {
+        inputs.push_back(makeInput(*it, true));
+    }
+    for (auto it = modifiers.rbegin(); it != modifiers.rend(); ++it) {
+        inputs.push_back(makeInput(*it, true));
+    }
+
+    const UINT sent = SendInput(static_cast<UINT>(inputs.size()), inputs.data(), sizeof(INPUT));
+    if (sent != inputs.size()) {
+        LOG_WARNING << "Отправлено " << sent << " из " << inputs.size()
+            << " событий клавиатуры, код " << GetLastError();
+    }
 }
 
 }

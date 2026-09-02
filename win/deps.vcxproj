@@ -37,8 +37,8 @@
     <Import Project="$(MSBuildProjectDirectory)\common.props" />
   </ImportGroup>
   <PropertyGroup>
-    <OutDir>$(MSBuildProjectDirectory)\..\..\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(MSBuildProjectDirectory)\..\..\$(Configuration)\$(Platform)\obj\deps\</IntDir>
+    <OutDir>$(MSBuildProjectDirectory)\..\..\build\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\..\..\build\$(Configuration)\$(Platform)\obj\deps\</IntDir>
     <TargetName>deps</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>

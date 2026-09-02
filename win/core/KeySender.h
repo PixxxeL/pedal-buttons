@@ -14,9 +14,7 @@ public:
     static void sendChord(const KeyChord& chord);
     static std::string nameForVirtualKey(int virtualKey);
     static bool isModifierName(const std::string& key);
-
-private:
-    static const std::unordered_map<std::string, int>& getKeyMap();
+    static const std::unordered_map<std::string, int>& virtualKeyMap();
 };
 
 }

@@ -3,7 +3,7 @@
   <Import Project="$(MSBuildThisFileDirectory)local.props" Condition="Exists('$(MSBuildThisFileDirectory)local.props')" />
   <PropertyGroup>
     <OutDir>$(MSBuildThisFileDirectory)..\..\</OutDir>
-    <IntDir>$(MSBuildThisFileDirectory)..\..\$(Configuration)\$(Platform)\obj\</IntDir>
+    <IntDir>$(MSBuildThisFileDirectory)..\..\build\$(Configuration)\$(Platform)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup>
     <DepsDir Condition="'$(DepsDir)' == ''">$(MSBuildThisFileDirectory)..\..\deps</DepsDir>
@@ -11,6 +11,9 @@
     <GlfwDir Condition="'$(GlfwDir)' == ''">$(DepsDir)\glfw</GlfwDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
+    <BuildLog>
+      <Path>$(IntDir)msbuild.log</Path>
+    </BuildLog>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
