@@ -1,11 +1,14 @@
 #pragma once
 
+#include <functional>
 #include <string>
 
 
 namespace ui {
 
-void printPortsList(int maxPort);
+bool attachParentConsole();
+void printPortsList();
 void showFatalMessage(const std::string& text);
+void installInterruptHandler(std::function<void()> onInterrupt);
 
 }

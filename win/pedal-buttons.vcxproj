@@ -51,12 +51,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>pedal-buttons-$(AppVersion)</TargetName>
   </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ImGuiDir);$(ImGuiDir)\backends;$(GlfwDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>setupapi.lib;opengl32.lib;gdi32.lib;shell32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="deps.vcxproj">
+      <Project>{a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
@@ -70,7 +84,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
@@ -90,22 +105,28 @@
     <ClCompile Include="core\PortEnumerator.cpp" />
     <ClCompile Include="core\SerialPort.cpp" />
     <ClCompile Include="core\SingleInstance.cpp" />
+    <ClCompile Include="ui\AppWindow.cpp" />
     <ClCompile Include="ui\ConsoleFrontend.cpp" />
+    <ClCompile Include="ui\MainView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="version.h" />
     <ClInclude Include="core\Args.h" />
     <ClInclude Include="core\Config.h" />
     <ClInclude Include="core\IniParser.h" />
+    <ClInclude Include="core\EventQueue.h" />
     <ClInclude Include="core\KeySender.h" />
     <ClInclude Include="core\LineAssembler.h" />
+    <ClInclude Include="core\PedalEvent.h" />
     <ClInclude Include="core\Logger.h" />
     <ClInclude Include="core\Paths.h" />
     <ClInclude Include="core\PedalService.h" />
     <ClInclude Include="core\PortEnumerator.h" />
     <ClInclude Include="core\SerialPort.h" />
     <ClInclude Include="core\SingleInstance.h" />
+    <ClInclude Include="ui\AppWindow.h" />
     <ClInclude Include="ui\ConsoleFrontend.h" />
+    <ClInclude Include="ui\MainView.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="pedal-buttons.rc" />

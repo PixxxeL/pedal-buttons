@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <iterator>
 #include <system_error>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -21,11 +23,23 @@ namespace {
 
 constexpr std::size_t readBufferSize = 256;
 constexpr std::chrono::milliseconds configCheckInterval{1000};
+constexpr std::chrono::milliseconds sleepSlice{100};
+
+const std::chrono::milliseconds reconnectDelays[] = {
+    std::chrono::milliseconds{1000},
+    std::chrono::milliseconds{2000},
+    std::chrono::milliseconds{5000}
+};
 
 }
 
 PedalService::PedalService(std::string configPath)
-    : configPath(std::move(configPath)), running(false) {}
+    : configPath(std::move(configPath)), running(false), connected(false), autoReconnect(true) {}
+
+PedalService::~PedalService() {
+    stop();
+    join();
+}
 
 bool PedalService::loadConfig() {
     if (!config.load(configPath)) {
@@ -73,6 +87,13 @@ std::string PedalService::toEventKey(const std::string& line) {
     return result;
 }
 
+void PedalService::emit(PedalEvent event) {
+    queue.push(std::move(event));
+    if (notifier) {
+        notifier();
+    }
+}
+
 void PedalService::handleLine(const std::string& line) {
     if (line.empty()) {
         return;
@@ -80,42 +101,105 @@ void PedalService::handleLine(const std::string& line) {
 
     LOG_DEBUG << "Пакет от Arduino: " << line;
 
-    const auto keys = config.getKeys(toEventKey(line));
+    const std::string eventKey = toEventKey(line);
+    const auto keys = config.getKeys(eventKey);
+
+    PedalEvent event;
+    event.name = eventKey;
+    event.keys = keys;
+
     if (keys.empty()) {
         LOG_WARNING << "Неизвестное событие или нет привязки: " << line;
+        event.type = PedalEventType::Unknown;
+        emit(std::move(event));
         return;
     }
 
-    LOG_INFO << "Отправка клавиш: " << KeySender::describe(keys);
     KeySender::send(keys);
+    LOG_INFO << "Отправка клавиш: " << KeySender::describe(keys);
+
+    event.type = PedalEventType::Pedal;
+    emit(std::move(event));
+}
+
+bool PedalService::sleepWhileRunning(std::chrono::milliseconds duration) {
+    std::chrono::milliseconds slept{0};
+    while (running && slept < duration) {
+        const auto step = (std::min)(sleepSlice, duration - slept);
+        std::this_thread::sleep_for(step);
+        slept += step;
+    }
+    return running;
+}
+
+void PedalService::setNotifier(std::function<void()> value) {
+    notifier = std::move(value);
+}
+
+void PedalService::setAutoReconnect(bool enabled) {
+    autoReconnect = enabled;
+}
+
+bool PedalService::autoReconnectEnabled() const {
+    return autoReconnect;
+}
+
+void PedalService::start(const std::string& portName) {
+    if (running) {
+        return;
+    }
+    join();
+
+    port = portName;
+    running = true;
+    worker = std::thread(&PedalService::workerLoop, this);
+}
+
+void PedalService::restart(const std::string& portName) {
+    stop();
+    join();
+    start(portName);
 }
 
 void PedalService::stop() {
     running = false;
 }
 
-void PedalService::run(const std::string& portName) {
-    SerialPort serialPort;
-
-    if (!serialPort.connect(portName)) {
-        LOG_ERROR << "На порту " << portName << " невозможно подключиться к Arduino: "
-            << serialPort.lastError();
-        return;
+void PedalService::join() {
+    if (worker.joinable()) {
+        worker.join();
     }
+}
 
-    LOG_INFO << "Подключен к Arduino на порту: " << portName;
+bool PedalService::isRunning() const {
+    return running;
+}
 
-    running = true;
+bool PedalService::isConnected() const {
+    return connected;
+}
+
+const std::string& PedalService::portName() const {
+    return port;
+}
+
+EventQueue<PedalEvent>& PedalService::events() {
+    return queue;
+}
+
+bool PedalService::runSession(SerialPort& serialPort) {
     LineAssembler assembler;
     std::vector<uint8_t> buffer(readBufferSize);
     std::string line;
+    bool clean = true;
 
     while (running && serialPort.isConnected()) {
         std::size_t bytesRead = 0;
         const ReadResult result = serialPort.read(buffer.data(), buffer.size(), bytesRead);
 
         if (result == ReadResult::Error) {
-            LOG_ERROR << "Ошибка чтения с порта " << portName << ": " << serialPort.lastError();
+            LOG_ERROR << "Ошибка чтения с порта " << port << ": " << serialPort.lastError();
+            clean = false;
             break;
         }
 
@@ -129,9 +213,79 @@ void PedalService::run(const std::string& portName) {
         reloadConfigIfChanged();
     }
 
-    serialPort.disconnect();
+    return clean;
+}
+
+void PedalService::workerLoop() {
+    std::size_t attempt = 0;
+    std::string lastFailure;
+
+    while (running) {
+        SerialPort serialPort;
+
+        if (serialPort.connect(port)) {
+            attempt = 0;
+            lastFailure.clear();
+
+            LOG_INFO << "Подключен к Arduino на порту: " << port;
+            connected = true;
+
+            PedalEvent opened;
+            opened.type = PedalEventType::Connected;
+            opened.name = port;
+            emit(opened);
+
+            const bool clean = runSession(serialPort);
+
+            serialPort.disconnect();
+            connected = false;
+
+            PedalEvent closed;
+            closed.type = PedalEventType::Disconnected;
+            closed.name = port;
+            emit(closed);
+
+            if (clean) {
+                LOG_INFO << "Соединение с портом " << port << " закрыто";
+            }
+        }
+        else {
+            const std::string failure = serialPort.lastError();
+            if (failure != lastFailure) {
+                LOG_ERROR << "На порту " << port << " невозможно подключиться к Arduino: " << failure;
+                lastFailure = failure;
+            }
+            else {
+                LOG_DEBUG << "Попытка подключения к " << port << " снова неудачна: " << failure;
+            }
+
+            PedalEvent problem;
+            problem.type = PedalEventType::Failure;
+            problem.name = port;
+            problem.keys = { failure };
+            emit(std::move(problem));
+        }
+
+        if (!running || !autoReconnect) {
+            break;
+        }
+
+        const std::size_t index = (std::min)(attempt, std::size(reconnectDelays) - 1);
+        const auto delay = reconnectDelays[index];
+        attempt++;
+
+        if (attempt == 1) {
+            LOG_INFO << "Переподключение к " << port << " через "
+                << delay.count() / 1000 << " с";
+        }
+
+        if (!sleepWhileRunning(delay)) {
+            break;
+        }
+    }
+
+    connected = false;
     running = false;
-    LOG_INFO << "Соединение с портом " << portName << " закрыто";
 }
 
 }

@@ -43,7 +43,13 @@
     <ClCompile Include="core\SerialPort.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="ui\AppWindow.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
     <ClCompile Include="ui\ConsoleFrontend.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\MainView.cpp">
       <Filter>ui</Filter>
     </ClCompile>
   </ItemGroup>
@@ -58,7 +64,13 @@
     <ClInclude Include="core\IniParser.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="core\EventQueue.h">
+      <Filter>core</Filter>
+    </ClInclude>
     <ClInclude Include="core\KeySender.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\PedalEvent.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\LineAssembler.h">
@@ -82,7 +94,13 @@
     <ClInclude Include="core\SerialPort.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="ui\AppWindow.h">
+      <Filter>ui</Filter>
+    </ClInclude>
     <ClInclude Include="ui\ConsoleFrontend.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\MainView.h">
       <Filter>ui</Filter>
     </ClInclude>
   </ItemGroup>

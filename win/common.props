@@ -5,6 +5,11 @@
     <OutDir>$(MSBuildThisFileDirectory)..\..\</OutDir>
     <IntDir>$(MSBuildThisFileDirectory)..\..\$(Configuration)\$(Platform)\obj\</IntDir>
   </PropertyGroup>
+  <PropertyGroup>
+    <DepsDir Condition="'$(DepsDir)' == ''">$(MSBuildThisFileDirectory)..\..\deps</DepsDir>
+    <ImGuiDir Condition="'$(ImGuiDir)' == ''">$(DepsDir)\imgui</ImGuiDir>
+    <GlfwDir Condition="'$(GlfwDir)' == ''">$(DepsDir)\glfw</GlfwDir>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>

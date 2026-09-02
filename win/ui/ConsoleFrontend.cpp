@@ -3,8 +3,8 @@
 #include <windows.h>
 
 #include <iostream>
+#include <mutex>
 #include <string>
-#include <vector>
 
 #include "../core/PortEnumerator.h"
 
@@ -12,6 +12,29 @@
 namespace ui {
 
 namespace {
+
+std::mutex interruptMutex;
+std::function<void()> interruptCallback;
+
+BOOL WINAPI consoleCtrlHandler(DWORD type) {
+    if (type != CTRL_C_EVENT && type != CTRL_BREAK_EVENT &&
+        type != CTRL_CLOSE_EVENT && type != CTRL_SHUTDOWN_EVENT) {
+        return FALSE;
+    }
+
+    std::function<void()> callback;
+    {
+        std::lock_guard<std::mutex> lock(interruptMutex);
+        callback = interruptCallback;
+    }
+
+    if (!callback) {
+        return FALSE;
+    }
+
+    callback();
+    return TRUE;
+}
 
 std::wstring toWide(const std::string& text) {
     if (text.empty()) {
@@ -32,25 +55,48 @@ std::wstring toWide(const std::string& text) {
 
 }
 
-void printPortsList(int maxPort) {
-    std::cout << "Доступные [x] COM-порты:" << std::endl;
+bool attachParentConsole() {
+    if (GetConsoleWindow() == NULL && !AttachConsole(ATTACH_PARENT_PROCESS)) {
+        return false;
+    }
 
-    const auto activePorts = core::listPortsFromRegistry();
+    FILE* stream = nullptr;
+    freopen_s(&stream, "CONOUT$", "w", stdout);
+    freopen_s(&stream, "CONOUT$", "w", stderr);
 
-    for (int i = 1; i <= maxPort; i++) {
-        const std::string portName = "COM" + std::to_string(i);
-        if (activePorts.count(portName)) {
-            std::cout << "[x] " << portName << std::endl;
-        }
-        else {
-            std::cout << "[ ] " << portName << std::endl;
-        }
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    std::cout.clear();
+    std::cerr.clear();
+    return true;
+}
+
+void printPortsList() {
+    const auto ports = core::listPorts();
+
+    if (ports.empty()) {
+        std::cout << "COM-порты не найдены." << std::endl;
+        return;
+    }
+
+    std::cout << "Доступные COM-порты:" << std::endl;
+    for (const auto& port : ports) {
+        std::cout << "* [" << port.name << "] " << port.description << std::endl;
     }
 }
 
 void showFatalMessage(const std::string& text) {
     MessageBoxW(NULL, toWide(text).c_str(), L"Pedal Buttons",
         MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+}
+
+void installInterruptHandler(std::function<void()> onInterrupt) {
+    {
+        std::lock_guard<std::mutex> lock(interruptMutex);
+        interruptCallback = std::move(onInterrupt);
+    }
+    SetConsoleCtrlHandler(consoleCtrlHandler, TRUE);
 }
 
 }

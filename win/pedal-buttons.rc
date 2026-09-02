@@ -1,1 +1,2 @@
 1 ICON "pedal-logo.ico"
+GLFW_ICON ICON "pedal-logo.ico"

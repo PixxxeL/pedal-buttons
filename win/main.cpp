@@ -9,49 +9,67 @@
 #include "core/Paths.h"
 #include "core/PedalService.h"
 #include "core/SingleInstance.h"
+#include "ui/AppWindow.h"
 #include "ui/ConsoleFrontend.h"
+#include "ui/MainView.h"
 #include "version.h"
 
 
 namespace {
 
-void initLogging() {
-    auto console = std::make_shared<core::ConsoleSink>();
-    console->setMinLevel(core::LogLevel::Debug);
-    core::Logger::instance().addSink(console);
+std::shared_ptr<core::MemorySink> initLogging(bool hasConsole) {
+    if (hasConsole) {
+        auto console = std::make_shared<core::ConsoleSink>();
+        console->setMinLevel(core::LogLevel::Debug);
+        core::Logger::instance().addSink(console);
+    }
+
+    auto memory = std::make_shared<core::MemorySink>();
+    memory->setMinLevel(core::LogLevel::Debug);
+    core::Logger::instance().addSink(memory);
 
     const std::string logPath = core::logFilePath();
     auto file = std::make_shared<core::FileSink>(logPath);
-    if (!file->isOpen()) {
-        std::cerr << "Не удалось создать лог-файл: " << logPath << std::endl;
-        return;
+    if (file->isOpen()) {
+        file->setMinLevel(core::LogLevel::Info);
+        core::Logger::instance().addSink(file);
     }
-    file->setMinLevel(core::LogLevel::Info);
-    core::Logger::instance().addSink(file);
+    else if (hasConsole) {
+        std::cerr << "Не удалось создать лог-файл: " << logPath << std::endl;
+    }
+
+    return memory;
 }
 
 }
 
 int main(int argc, char** argv) {
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
+    const bool hasConsole = ui::attachParentConsole();
 
     const core::ParseResult parsed = core::parseArgs(argc, argv);
     if (!parsed.ok) {
-        std::cerr << parsed.error << std::endl << std::endl << core::helpText();
+        if (hasConsole) {
+            std::cerr << parsed.error << std::endl << std::endl << core::helpText();
+        }
+        else {
+            ui::showFatalMessage(parsed.error);
+        }
         return 1;
     }
     if (parsed.options.showHelp) {
-        std::cout << "Pedal Buttons " << PEDAL_BUTTONS_VERSION << std::endl << std::endl
-            << core::helpText();
+        if (hasConsole) {
+            std::cout << "Pedal Buttons " << PEDAL_BUTTONS_VERSION << std::endl << std::endl
+                << core::helpText();
+        }
         return 0;
     }
 
-    initLogging();
+    auto logSink = initLogging(hasConsole);
+    LOG_INFO << "Pedal Buttons " << PEDAL_BUTTONS_VERSION;
     LOG_DEBUG << "Папка данных: " << core::dataDirectory();
 
     if (parsed.options.showList) {
-        ui::printPortsList(static_cast<int>(parsed.options.portCount));
+        ui::printPortsList();
     }
 
     const std::string iniFile = core::findConfigFile(parsed.options.iniPath);
@@ -74,7 +92,36 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    service.run("COM" + std::to_string(parsed.options.port));
+    ui::AppWindow window;
+    if (!window.create("Pedal Buttons " PEDAL_BUTTONS_VERSION, 720, 520)) {
+        ui::showFatalMessage("Не удалось создать окно приложения.");
+        return 1;
+    }
+
+    ui::installInterruptHandler([&window] {
+        window.requestClose();
+    });
+
+    service.setNotifier(&ui::AppWindow::wakeUp);
+
+    const std::string startPort = "COM" + std::to_string(parsed.options.port);
+    service.start(startPort);
+
+    ui::MainView view(service, logSink, startPort);
+    while (!window.shouldClose()) {
+        window.waitEvents();
+        view.pumpEvents();
+
+        if (window.isVisible()) {
+            window.beginFrame();
+            view.draw();
+            window.endFrame();
+        }
+    }
+
+    service.stop();
+    service.join();
+    window.destroy();
 
     return 0;
 }

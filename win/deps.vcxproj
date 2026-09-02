@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d}</ProjectGuid>
+    <RootNamespace>deps</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(MSBuildProjectDirectory)\common.props" />
+  </ImportGroup>
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\..\..\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\..\..\$(Configuration)\$(Platform)\obj\deps\</IntDir>
+    <TargetName>deps</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level1</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <PreprocessorDefinitions>_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ImGuiDir);$(ImGuiDir)\backends;$(GlfwDir)\include;$(GlfwDir)\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(ImGuiDir)\imgui.cpp" />
+    <ClCompile Include="$(ImGuiDir)\imgui_draw.cpp" />
+    <ClCompile Include="$(ImGuiDir)\imgui_tables.cpp" />
+    <ClCompile Include="$(ImGuiDir)\imgui_widgets.cpp" />
+    <ClCompile Include="$(ImGuiDir)\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="$(ImGuiDir)\backends\imgui_impl_opengl3.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(GlfwDir)\src\context.c" />
+    <ClCompile Include="$(GlfwDir)\src\init.c" />
+    <ClCompile Include="$(GlfwDir)\src\input.c" />
+    <ClCompile Include="$(GlfwDir)\src\monitor.c" />
+    <ClCompile Include="$(GlfwDir)\src\platform.c" />
+    <ClCompile Include="$(GlfwDir)\src\vulkan.c" />
+    <ClCompile Include="$(GlfwDir)\src\window.c" />
+    <ClCompile Include="$(GlfwDir)\src\egl_context.c" />
+    <ClCompile Include="$(GlfwDir)\src\osmesa_context.c" />
+    <ClCompile Include="$(GlfwDir)\src\wgl_context.c" />
+    <ClCompile Include="$(GlfwDir)\src\null_init.c" />
+    <ClCompile Include="$(GlfwDir)\src\null_joystick.c" />
+    <ClCompile Include="$(GlfwDir)\src\null_monitor.c" />
+    <ClCompile Include="$(GlfwDir)\src\null_window.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_init.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_joystick.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_module.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_monitor.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_thread.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_time.c" />
+    <ClCompile Include="$(GlfwDir)\src\win32_window.c" />
+  </ItemGroup>
+  <Target Name="CheckDependencies" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(ImGuiDir)\imgui.cpp')" Text="ImGui не найден в $(ImGuiDir). Положи исходники ImGui туда или задай ImGuiDir в win\local.props." />
+    <Error Condition="!Exists('$(GlfwDir)\src\context.c')" Text="GLFW не найден в $(GlfwDir). Положи исходники GLFW туда или задай GlfwDir в win\local.props." />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

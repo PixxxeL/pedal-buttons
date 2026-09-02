@@ -1,12 +1,17 @@
 #pragma once
 
-#include <set>
 #include <string>
+#include <vector>
 
 
 namespace core {
 
-std::set<std::string> listPortsFromRegistry();
-std::set<std::string> probePorts(int maxPort);
+struct PortInfo {
+    std::string name;
+    std::string description;
+    std::string hardwareId;
+};
+
+std::vector<PortInfo> listPorts();
 
 }

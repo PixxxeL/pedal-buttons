@@ -69,11 +69,13 @@ public:
     explicit MemorySink(std::size_t capacity = 2000);
     void write(const LogRecord& record) override;
     std::vector<LogRecord> snapshot() const;
+    std::uint64_t version() const;
     void clear();
 
 private:
     mutable std::mutex mutex;
     std::size_t capacity;
+    std::uint64_t sequence = 0;
     std::deque<LogRecord> records;
 };
 

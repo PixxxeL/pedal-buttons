@@ -99,6 +99,12 @@ void MemorySink::write(const LogRecord& record) {
     while (records.size() > capacity) {
         records.pop_front();
     }
+    sequence++;
+}
+
+std::uint64_t MemorySink::version() const {
+    std::lock_guard<std::mutex> lock(mutex);
+    return sequence;
 }
 
 std::vector<LogRecord> MemorySink::snapshot() const {
@@ -109,6 +115,7 @@ std::vector<LogRecord> MemorySink::snapshot() const {
 void MemorySink::clear() {
     std::lock_guard<std::mutex> lock(mutex);
     records.clear();
+    sequence++;
 }
 
 Logger& Logger::instance() {

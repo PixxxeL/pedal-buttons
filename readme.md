@@ -10,11 +10,22 @@ The following are required to run the system:
 
 ## Building
 
-Requirements: Visual Studio 2022 with the C++ desktop workload (toolset v143). There are no external dependencies — everything needed is in the Windows SDK.
+Requirements: Visual Studio 2022 with the C++ desktop workload (toolset v143).
 
-Open `win/win.sln` and build the `Release|x64` configuration, or run `build.bat` from the project folder. The executable is written to the project folder as `pedal-buttons-<version>.exe`.
+Third-party sources are expected in a `deps` folder next to the repository, inside the project folder:
 
-Only `x64` is supported. Common compiler settings live in `win/common.props`. If a machine needs different paths or toolset settings, put them in `win/local.props` — it is imported automatically when present and is excluded from version control.
+```
+<project>/
+    repo/           this repository
+    deps/imgui/     Dear ImGui, including backends/
+    deps/glfw/      GLFW sources
+```
+
+Both are built from source by the `deps` project in the solution, so there is no separate CMake step and no DLLs to ship. Nothing else is needed beyond the Windows SDK.
+
+Open `win/win.sln` and build the `Release|x64` configuration, or run `build.bat` from the project folder. The executable is written to the project folder as `pedal-buttons-<version>.exe`; the debug configuration produces `pedal-buttons-<version>-debug.exe` alongside it.
+
+Only `x64` is supported. Common compiler settings and dependency paths live in `win/common.props`. If a machine keeps its dependencies elsewhere, override `DepsDir`, `ImGuiDir` or `GlfwDir` in `win/local.props` — it is imported automatically when present and is excluded from version control.
 
 Source layout:
 
@@ -47,8 +58,8 @@ RIGHT_HOLD = b
 Command line options:
 
 * `-i` or `--ini` - (optional) Path to the .ini configuration file
-* `-l` or `--list` - (optional) Show available serial ports
-* `-c` or `--portCount` - (optional, default 9) Number of ports to scan (from 1 to 20)
+* `-l` or `--list` - (optional) List the serial ports present in the system, with device names
+* `-c` or `--portCount` - (optional, default 9) Upper bound for `--port` (from 1 to 20)
 * `-p` or `--port` - (optional, default 9) Port number to connect to (from 1 to portCount)
 * `-h` or `--help` - (optional) Show help
 

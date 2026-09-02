@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36511.14 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pedal-buttons", "pedal-buttons.vcxproj", "{CC3D6C11-D1BA-497F-A16E-1FB91F198BB0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "deps", "deps.vcxproj", "{A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -15,6 +17,10 @@ Global
 		{CC3D6C11-D1BA-497F-A16E-1FB91F198BB0}.Debug|x64.Build.0 = Debug|x64
 		{CC3D6C11-D1BA-497F-A16E-1FB91F198BB0}.Release|x64.ActiveCfg = Release|x64
 		{CC3D6C11-D1BA-497F-A16E-1FB91F198BB0}.Release|x64.Build.0 = Release|x64
+		{A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D}.Debug|x64.ActiveCfg = Debug|x64
+		{A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D}.Debug|x64.Build.0 = Debug|x64
+		{A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D}.Release|x64.ActiveCfg = Release|x64
+		{A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
