@@ -58,7 +58,7 @@ If the file path is not specified, the configuration is searched for in three pl
 
 ## Data folder
 
-The log and, by default, the configuration live in a `data` folder next to the executable, so the application stays portable. If that folder cannot be written to (for example after installing into Program Files), everything moves to `%LOCALAPPDATA%\pedal-buttons` instead.
+The log and, by default, the configuration live next to the executable, so the application stays portable. If that folder cannot be written to (for example after installing into Program Files), everything moves to `%LOCALAPPDATA%\pedal-buttons` instead.
 
 The configuration is re-read automatically when the file changes, so bindings can be edited while the application is running.
 

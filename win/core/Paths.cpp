@@ -19,7 +19,6 @@ namespace {
 
 const char* configFileName = "pedal-buttons.ini";
 const char* logFileName = "pedal-buttons.log";
-const char* dataFolderName = "data";
 const char* appFolderName = "pedal-buttons";
 
 bool isWritable(const fs::path& directory) {
@@ -44,16 +43,16 @@ std::string localAppDataDirectory() {
 }
 
 std::string resolveDataDirectory() {
-    const fs::path portable = fs::path(exeDirectory()) / dataFolderName;
+    const fs::path portable = exeDirectory();
     if (isWritable(portable)) {
         return portable.string();
     }
 
     const std::string localAppData = localAppDataDirectory();
     if (!localAppData.empty()) {
-        const fs::path roaming = fs::path(localAppData) / appFolderName;
-        if (isWritable(roaming)) {
-            return roaming.string();
+        const fs::path fallback = fs::path(localAppData) / appFolderName;
+        if (isWritable(fallback)) {
+            return fallback.string();
         }
     }
 
@@ -95,21 +94,23 @@ std::string findConfigFile(const std::string& userPath) {
         return "";
     }
 
-    const fs::path candidates[] = {
-        fs::path(dataDirectory()) / configFileName,
-        fs::path(exeDirectory()) / configFileName,
-        fs::current_path(error) / configFileName
-    };
+    const std::string workingDirectory = fs::current_path(error).string();
+    const std::string searched[] = { dataDirectory(), exeDirectory(), workingDirectory };
 
-    for (const auto& candidate : candidates) {
-        if (fs::exists(candidate, error)) {
-            return candidate.string();
+    std::string reported;
+    for (const auto& directory : searched) {
+        if (directory.empty()) {
+            continue;
+        }
+        if (fs::exists(fs::path(directory) / configFileName, error)) {
+            return (fs::path(directory) / configFileName).string();
+        }
+        if (reported.find(directory) == std::string::npos) {
+            reported += (reported.empty() ? "" : ", ") + directory;
         }
     }
 
-    LOG_ERROR << "Файл конфигурации не найден ни в папке данных (" << dataDirectory()
-        << "), ни рядом с exe (" << exeDirectory()
-        << "), ни в рабочей папке (" << fs::current_path(error).string() << ")";
+    LOG_ERROR << "Файл конфигурации " << configFileName << " не найден. Искали в: " << reported;
     return "";
 }
 
