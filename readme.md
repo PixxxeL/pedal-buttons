@@ -39,21 +39,29 @@ The utility requires a configuration file, such as `pedal-buttons.ini`, with app
 ```ini
 [app]
 app = winamp
-; instead of winamp, you can specify the name of any existing section,
-; then the configuration will be loaded from it
-; there can be any number of sections
+; instead of winamp, you can name any other section below;
+; that section becomes the active profile
 
 [winamp]
-LEFT_CLICK = x
-LEFT_HOLD = z
+LEFT_CLICK  = x
+LEFT_HOLD   = ctrl+r
 RIGHT_CLICK = v
-RIGHT_HOLD = b
-; the left side can only contain these strings
-; the right side can contain from 0 to any number of key names
-; separated by commas
-; for example: LEFT_CLICK = ctrl,r
-; below is a list of special key strings
+RIGHT_HOLD  = ctrl+s,enter
+match = process:winamp.exe
+exe = C:\Program Files\Winamp\winamp.exe
 ```
+
+The left side of a binding accepts only the four event names above. On the right side, `+` joins keys into a chord pressed at once, and a comma separates steps pressed one after another. So `ctrl+s,enter` presses Ctrl+S, then Enter.
+
+`match` selects the window that the pedal drives. It is brought to the foreground before the keys are sent, which is what audio applications need — they only react to real keyboard focus. Three forms are accepted:
+
+* `process:winamp.exe` — executable name, the default when no prefix is given
+* `class:Winamp v1.x` — window class, useful when several applications share a name
+* `title:Playlist` — a substring of the window title
+
+`exe` is optional and only used when no matching window exists: the application is started instead. Leaving `match` empty keeps the old behaviour — keys go to whatever window currently has focus.
+
+Both fields are easier to fill from the interface: **Привязки → Целевое приложение → Выбрать из запущенных** lists open windows and fills them in.
 
 Command line options:
 

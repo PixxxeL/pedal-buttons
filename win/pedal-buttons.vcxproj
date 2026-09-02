@@ -90,6 +90,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="core\AppActivator.cpp" />
     <ClCompile Include="core\Args.cpp" />
     <ClCompile Include="core\Config.cpp" />
     <ClCompile Include="core\IniDocument.cpp" />
@@ -114,6 +115,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="version.h" />
+    <ClInclude Include="core\AppActivator.h" />
     <ClInclude Include="core\Args.h" />
     <ClInclude Include="core\Config.h" />
     <ClInclude Include="core\IniDocument.h" />

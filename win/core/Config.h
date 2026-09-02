@@ -29,6 +29,14 @@ public:
     void addProfile(const std::string& name);
     void removeProfile(const std::string& name);
 
+    std::string windowMatch() const;
+    std::string windowMatch(const std::string& profile) const;
+    void setWindowMatch(const std::string& profile, const std::string& value);
+
+    std::string executablePath() const;
+    std::string executablePath(const std::string& profile) const;
+    void setExecutablePath(const std::string& profile, const std::string& value);
+
     KeySequence binding(const std::string& event) const;
     KeySequence binding(const std::string& profile, const std::string& event) const;
     void setBinding(const std::string& profile, const std::string& event, const KeySequence& keys);

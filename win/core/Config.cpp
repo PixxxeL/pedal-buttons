@@ -181,6 +181,38 @@ void Config::removeProfile(const std::string& name) {
     }
 }
 
+std::string Config::windowMatch() const {
+    return windowMatch(profile);
+}
+
+std::string Config::windowMatch(const std::string& profileName) const {
+    return IniDocument::trim(document.get(profileName, "match"));
+}
+
+void Config::setWindowMatch(const std::string& profileName, const std::string& value) {
+    if (windowMatch(profileName) == IniDocument::trim(value)) {
+        return;
+    }
+    document.set(profileName, "match", IniDocument::trim(value));
+    dirty = true;
+}
+
+std::string Config::executablePath() const {
+    return executablePath(profile);
+}
+
+std::string Config::executablePath(const std::string& profileName) const {
+    return IniDocument::trim(document.get(profileName, "exe"));
+}
+
+void Config::setExecutablePath(const std::string& profileName, const std::string& value) {
+    if (executablePath(profileName) == IniDocument::trim(value)) {
+        return;
+    }
+    document.set(profileName, "exe", IniDocument::trim(value));
+    dirty = true;
+}
+
 KeySequence Config::binding(const std::string& event) const {
     return binding(profile, event);
 }

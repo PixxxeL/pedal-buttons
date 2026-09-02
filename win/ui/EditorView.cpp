@@ -33,7 +33,8 @@ const char* eventTitle(const std::string& event) {
     return event.c_str();
 }
 
-void copyInto(std::array<char, 128>& buffer, const std::string& text) {
+template <std::size_t Size>
+void copyInto(std::array<char, Size>& buffer, const std::string& text) {
     const std::size_t length = (std::min)(text.size(), buffer.size() - 1);
     std::memcpy(buffer.data(), text.data(), length);
     buffer[length] = '\0';
@@ -61,6 +62,9 @@ void EditorView::syncBuffers(bool force) {
     for (std::size_t i = 0; i < events.size() && i < buffers.size(); i++) {
         copyInto(buffers[i], core::formatKeySequence(config.binding(events[i])));
     }
+
+    copyInto(matchBuffer, config.windowMatch());
+    copyInto(exeBuffer, config.executablePath());
 }
 
 void EditorView::update() {
@@ -189,6 +193,113 @@ void EditorView::drawNewProfilePopup() {
     ImGui::EndPopup();
 }
 
+void EditorView::drawTarget() {
+    const std::string profile = config.activeProfile();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Окно");
+    ImGui::SameLine(ImGui::CalcTextSize("Приложение").x + ImGui::GetStyle().ItemSpacing.x * 2.0f);
+
+    const float pickerWidth = ImGui::CalcTextSize("Выбрать из запущенных").x
+        + ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - pickerWidth
+        - ImGui::GetStyle().ItemSpacing.x);
+
+    if (ImGui::InputText("##match", matchBuffer.data(), matchBuffer.size())) {
+        config.setWindowMatch(profile, std::string(matchBuffer.data()));
+        syncedGeneration = config.generation();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Выбрать из запущенных")) {
+        windows = core::listWindows();
+        openWindowPicker = true;
+    }
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Приложение");
+    ImGui::SameLine(ImGui::CalcTextSize("Приложение").x + ImGui::GetStyle().ItemSpacing.x * 2.0f);
+
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - pickerWidth
+        - ImGui::GetStyle().ItemSpacing.x);
+    if (ImGui::InputText("##exe", exeBuffer.data(), exeBuffer.size())) {
+        config.setExecutablePath(profile, std::string(exeBuffer.data()));
+        syncedGeneration = config.generation();
+    }
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(std::strlen(matchBuffer.data()) == 0);
+    if (ImGui::Button("Проверить")) {
+        const core::ActivationResult result = core::activateTarget(
+            std::string(matchBuffer.data()), std::string(exeBuffer.data()));
+        LOG_INFO << "Проверка окна: " << core::describeActivation(result);
+    }
+    ImGui::EndDisabled();
+
+    ImGui::Spacing();
+    if (std::strlen(matchBuffer.data()) == 0) {
+        ImGui::TextColored(colorMuted,
+            "Окно не задано — клавиши уходят в то приложение, которое сейчас в фокусе.");
+    }
+    else {
+        ImGui::TextColored(colorMuted,
+            "Перед отправкой клавиш окно выводится на передний план. "
+            "Если оно не найдено, запускается указанное приложение.");
+    }
+}
+
+void EditorView::drawWindowPickerPopup() {
+    if (openWindowPicker) {
+        ImGui::OpenPopup("Запущенные окна");
+        openWindowPicker = false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(640.0f, 420.0f), ImGuiCond_Appearing);
+    if (!ImGui::BeginPopupModal("Запущенные окна", nullptr)) {
+        return;
+    }
+
+    ImGui::TextColored(colorMuted, "Выбери окно приложения, которым управляет педаль.");
+    ImGui::Spacing();
+
+    ImGui::BeginChild("list", ImVec2(0.0f, -ImGui::GetFrameHeightWithSpacing()),
+        ImGuiChildFlags_Borders);
+
+    for (const auto& window : windows) {
+        ImGui::PushID(reinterpret_cast<const void*>(window.handle));
+
+        const std::string label = (window.process.empty() ? "?" : window.process)
+            + "  —  " + window.title;
+        if (ImGui::Selectable(label.c_str())) {
+            const std::string profile = config.activeProfile();
+            copyInto(matchBuffer, core::makeMatchRule(window));
+            config.setWindowMatch(profile, std::string(matchBuffer.data()));
+
+            if (!window.path.empty()) {
+                copyInto(exeBuffer, window.path);
+                config.setExecutablePath(profile, window.path);
+            }
+
+            syncedGeneration = config.generation();
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (ImGui::IsItemHovered() && !window.className.empty()) {
+            ImGui::SetTooltip("класс: %s", window.className.c_str());
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::EndChild();
+
+    if (ImGui::Button("Отмена")) {
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+}
+
 void EditorView::drawBindings() {
     const auto& events = core::Config::eventNames();
     const std::string profile = config.activeProfile();
@@ -273,6 +384,10 @@ void EditorView::draw() {
 
     drawProfiles();
     drawNewProfilePopup();
+
+    ImGui::SeparatorText("Целевое приложение");
+    drawTarget();
+    drawWindowPickerPopup();
 
     ImGui::SeparatorText("Привязки");
     drawBindings();

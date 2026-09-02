@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <string>
 
+#include <vector>
+
+#include "../core/AppActivator.h"
 #include "../core/Config.h"
 #include "KeyCapture.h"
 
@@ -21,6 +24,8 @@ public:
 private:
     void syncBuffers(bool force);
     void drawProfiles();
+    void drawTarget();
+    void drawWindowPickerPopup();
     void drawBindings();
     void drawNewProfilePopup();
 
@@ -29,6 +34,12 @@ private:
     std::array<std::array<char, 128>, 4> buffers{};
     std::string syncedProfile;
     std::uint64_t syncedGeneration = 0;
+
+    std::array<char, 256> matchBuffer{};
+    std::array<char, 512> exeBuffer{};
+
+    std::vector<core::WindowInfo> windows;
+    bool openWindowPicker = false;
 
     std::array<char, 64> newProfileName{};
     bool openNewProfile = false;

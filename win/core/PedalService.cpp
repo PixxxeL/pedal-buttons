@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "AppActivator.h"
 #include "KeyBinding.h"
 #include "KeySender.h"
 #include "LineAssembler.h"
@@ -118,11 +119,34 @@ void PedalService::handleLine(const std::string& line) {
 
     if (paused) {
         LOG_INFO << "Пауза, клавиши не отправлены: " << event.detail;
+        event.type = PedalEventType::Pedal;
+        emit(std::move(event));
+        return;
     }
-    else {
-        KeySender::send(keys);
-        LOG_INFO << "Отправка клавиш: " << event.detail;
+
+    const std::string rule = config.windowMatch();
+    if (!rule.empty()) {
+        const ActivationResult activation = activateTarget(rule, config.executablePath());
+
+        if (activation == ActivationResult::Launched) {
+            LOG_INFO << "Целевое окно не найдено, " << describeActivation(activation)
+                << ". Нажми педаль ещё раз, когда оно откроется.";
+            event.type = PedalEventType::Pedal;
+            emit(std::move(event));
+            return;
+        }
+
+        if (activation == ActivationResult::NotFound || activation == ActivationResult::Failed) {
+            LOG_WARNING << "Правило \"" << rule << "\": " << describeActivation(activation)
+                << ", клавиши уйдут в активное окно";
+        }
+        else if (activation == ActivationResult::Activated) {
+            LOG_DEBUG << "Правило \"" << rule << "\": " << describeActivation(activation);
+        }
     }
+
+    KeySender::send(keys);
+    LOG_INFO << "Отправка клавиш: " << event.detail;
 
     event.type = PedalEventType::Pedal;
     emit(std::move(event));
