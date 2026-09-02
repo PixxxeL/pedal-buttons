@@ -2,11 +2,9 @@
 
 #include <windows.h>
 
-#include <atomic>
-#include <chrono>
 #include <iostream>
 #include <string>
-#include <thread>
+#include <vector>
 
 #include "../core/PortEnumerator.h"
 
@@ -15,12 +13,22 @@ namespace ui {
 
 namespace {
 
-typedef int (WINAPI *MessageBoxTimeoutProc)(HWND, LPCSTR, LPCSTR, UINT, WORD, DWORD);
+std::wstring toWide(const std::string& text) {
+    if (text.empty()) {
+        return L"";
+    }
 
-constexpr DWORD messageTimeoutMs = 3000;
+    const int length = MultiByteToWideChar(CP_UTF8, 0, text.data(),
+        static_cast<int>(text.size()), nullptr, 0);
+    if (length <= 0) {
+        return L"";
+    }
 
-std::atomic<bool> messageOpen{false};
-std::atomic<bool> messageCooldown{false};
+    std::wstring result(static_cast<std::size_t>(length), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()),
+        result.data(), length);
+    return result;
+}
 
 }
 
@@ -41,34 +49,8 @@ void printPortsList(int maxPort) {
 }
 
 void showFatalMessage(const std::string& text) {
-    if (messageOpen.load() || messageCooldown.load()) {
-        return;
-    }
-
-    HMODULE user32 = LoadLibraryA("user32.dll");
-    if (!user32) {
-        return;
-    }
-
-    auto messageBoxTimeout = reinterpret_cast<MessageBoxTimeoutProc>(
-        GetProcAddress(user32, "MessageBoxTimeoutA"));
-    if (!messageBoxTimeout) {
-        FreeLibrary(user32);
-        return;
-    }
-
-    messageOpen.store(true);
-    messageCooldown.store(true);
-
-    std::thread([] {
-        std::this_thread::sleep_for(std::chrono::milliseconds(messageTimeoutMs));
-        messageCooldown.store(false);
-    }).detach();
-
-    messageBoxTimeout(NULL, text.c_str(), "Pedal Buttons", MB_OK | MB_ICONERROR, 0, 0);
-
-    messageOpen.store(false);
-    FreeLibrary(user32);
+    MessageBoxW(NULL, toWide(text).c_str(), L"Pedal Buttons",
+        MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
 }
 
 }

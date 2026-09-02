@@ -54,7 +54,15 @@ Command line options:
 
 Values may be given either as a separate argument (`-p 7`, `--port 7`) or attached (`-p7`, `--port=7`).
 
-If the file path is not specified, it will be searched for either in the launch folder (working directory) or next to the executable.
+If the file path is not specified, the configuration is searched for in three places, in order: the data folder, next to the executable, then the working directory.
+
+## Data folder
+
+The log and, by default, the configuration live in a `data` folder next to the executable, so the application stays portable. If that folder cannot be written to (for example after installing into Program Files), everything moves to `%LOCALAPPDATA%\pedal-buttons` instead.
+
+The configuration is re-read automatically when the file changes, so bindings can be edited while the application is running.
+
+Only one instance can run at a time — the serial port is opened exclusively, so a second instance would fail to connect. Listing ports (`--list`) and showing help are not affected.
 
 ## List of special key strings
 

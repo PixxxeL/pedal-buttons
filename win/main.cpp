@@ -1,34 +1,29 @@
 #include <windows.h>
 
-#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
 
 #include "core/Args.h"
-#include "core/Config.h"
 #include "core/Logger.h"
 #include "core/Paths.h"
 #include "core/PedalService.h"
+#include "core/SingleInstance.h"
 #include "ui/ConsoleFrontend.h"
 #include "version.h"
 
 
 namespace {
 
-void initLogging(const std::string& fileName) {
+void initLogging() {
     auto console = std::make_shared<core::ConsoleSink>();
     console->setMinLevel(core::LogLevel::Debug);
     core::Logger::instance().addSink(console);
 
-    if (fileName.empty()) {
-        return;
-    }
-
-    const std::filesystem::path logPath = std::filesystem::current_path() / fileName;
-    auto file = std::make_shared<core::FileSink>(logPath.string());
+    const std::string logPath = core::logFilePath();
+    auto file = std::make_shared<core::FileSink>(logPath);
     if (!file->isOpen()) {
-        std::cerr << "Не удалось создать лог-файл: " << logPath.string() << std::endl;
+        std::cerr << "Не удалось создать лог-файл: " << logPath << std::endl;
         return;
     }
     file->setMinLevel(core::LogLevel::Info);
@@ -52,23 +47,33 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    initLogging("pedal-buttons.log");
+    initLogging();
+    LOG_DEBUG << "Папка данных: " << core::dataDirectory();
 
     if (parsed.options.showList) {
         ui::printPortsList(static_cast<int>(parsed.options.portCount));
     }
 
     const std::string iniFile = core::findConfigFile(parsed.options.iniPath);
-    core::Config config;
-    if (iniFile.empty() || !config.load(iniFile)) {
+    if (iniFile.empty()) {
+        ui::showFatalMessage("Файл конфигурации не найден.\nРабота невозможна.");
+        return 1;
+    }
+
+    core::PedalService service(iniFile);
+    if (!service.loadConfig()) {
         LOG_ERROR << "Конфигурация не загружена. Работа невозможна.";
         ui::showFatalMessage("Конфигурация не загружена.\nРабота невозможна.");
         return 1;
     }
 
-    LOG_INFO << "Загружен конфиг: " << iniFile << ", приложение: " << config.getAppName();
+    const core::SingleInstance instance("pedal-buttons");
+    if (!instance.acquired()) {
+        LOG_ERROR << "Приложение уже запущено. Второй экземпляр займёт тот же COM-порт.";
+        ui::showFatalMessage("Pedal Buttons уже запущен.");
+        return 1;
+    }
 
-    core::PedalService service(iniFile);
     service.run("COM" + std::to_string(parsed.options.port));
 
     return 0;
