@@ -14,6 +14,7 @@ namespace core {
 class Config {
 public:
     static const std::vector<std::string>& eventNames();
+    static bool createDefault(const std::string& filePath);
 
     bool load(const std::string& filePath);
     bool reload();

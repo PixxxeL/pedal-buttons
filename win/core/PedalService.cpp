@@ -24,6 +24,7 @@ namespace core {
 namespace {
 
 constexpr std::size_t readBufferSize = 256;
+const char* firmwareId = "pedal-buttons";
 constexpr std::chrono::milliseconds configCheckInterval{1000};
 constexpr std::chrono::milliseconds sleepSlice{100};
 
@@ -102,6 +103,11 @@ void PedalService::handleLine(const std::string& line) {
     }
 
     LOG_DEBUG << "Пакет от Arduino: " << line;
+
+    if (line.rfind(firmwareId, 0) == 0) {
+        LOG_INFO << "Прошивка: " << line;
+        return;
+    }
 
     const std::string eventKey = toEventKey(line);
     const KeySequence keys = config.binding(eventKey);

@@ -16,6 +16,9 @@
     <ClCompile Include="core\Args.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="core\BoardDetector.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
     <ClCompile Include="core\Config.cpp">
       <Filter>core</Filter>
     </ClCompile>
@@ -73,6 +76,9 @@
     <ClCompile Include="ui\Theme.cpp">
       <Filter>ui</Filter>
     </ClCompile>
+    <ClCompile Include="ui\WizardView.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
     <ClCompile Include="ui\MainView.cpp">
       <Filter>ui</Filter>
     </ClCompile>
@@ -83,6 +89,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\Args.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\BoardDetector.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\Config.h">
@@ -149,6 +158,9 @@
       <Filter>ui</Filter>
     </ClInclude>
     <ClInclude Include="ui\Theme.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\WizardView.h">
       <Filter>ui</Filter>
     </ClInclude>
     <ClInclude Include="ui\MainView.h">

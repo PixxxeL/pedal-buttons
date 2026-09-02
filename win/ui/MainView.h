@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "../core/BoardDetector.h"
 #include "../core/Config.h"
 #include "../core/Logger.h"
 #include "../core/PedalEvent.h"
@@ -13,6 +14,7 @@
 #include "../core/PortEnumerator.h"
 #include "EditorView.h"
 #include "SettingsView.h"
+#include "WizardView.h"
 #include "Theme.h"
 
 
@@ -34,7 +36,7 @@ struct PedalIndicator {
 class MainView {
 public:
     MainView(core::PedalService& service, core::Config& config,
-        std::shared_ptr<core::MemorySink> logSink, std::string initialPort);
+        std::shared_ptr<core::MemorySink> logSink, std::string initialPort, bool runWizard);
 
     void pumpEvents();
     void draw();
@@ -53,6 +55,7 @@ private:
 
     void refreshLog();
     void refreshPorts(bool force);
+    void pollDetector();
     void applyIndicator(const core::PedalEvent& event);
 
     core::PedalService& service;
@@ -60,11 +63,15 @@ private:
     std::shared_ptr<core::MemorySink> logSink;
     EditorView editor;
     SettingsView settings;
+    core::BoardDetector detector;
+    WizardView wizard;
     int selectedTab = 0;
 
     std::uint64_t logVersion = 0;
     std::vector<core::LogRecord> logRecords;
     bool levelFilter[6] = { false, true, true, true, true, true };
+
+    bool serviceWasRunning = false;
 
     std::vector<core::PortInfo> ports;
     std::chrono::steady_clock::time_point lastPortScan;

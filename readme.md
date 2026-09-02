@@ -5,8 +5,16 @@ Foot switcher management of music player through Arduino and CLI for Windows.
 The following are required to run the system:
 
 * An Arduino board (at least as capable as a Nano) flashed with `pedal-buttons/pedal-buttons.ino`
-* Button signals are received on pins 2 and 3
+* Button signals are received on pins 2 and 3, wired to ground and read with the internal pull-ups
 * Build the utility located in the `win` folder and run it on the host machine, after connecting the Arduino via USB
+
+## Firmware
+
+The sketch polls both pins without blocking and reports four events over the serial port at 9600 baud: `left-click`, `left-hold`, `right-click`, `right-hold`. A press shorter than 750 ms is a click; holding past that threshold reports a hold once, and no click follows on release. Contact bounce is filtered with a 25 ms window.
+
+On start the board announces itself with a line such as `pedal-buttons 1.1.0`, and repeats that line whenever it receives a `?` character. This lets the host recognise the board among the serial ports of the system.
+
+The firmware carries its own version, unrelated to the version of the host application: a board keeps whatever was flashed onto it while the application is updated independently. The host only looks at the `pedal-buttons` prefix to identify the board and never compares versions, so an application update never orphans an already flashed board.
 
 ## Building
 

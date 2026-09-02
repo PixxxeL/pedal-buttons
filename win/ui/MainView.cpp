@@ -114,10 +114,13 @@ bool toggleChip(const char* label, bool& value, const ImVec4& activeColor) {
 }
 
 MainView::MainView(core::PedalService& service, core::Config& config,
-        std::shared_ptr<core::MemorySink> logSink, std::string initialPort)
+        std::shared_ptr<core::MemorySink> logSink, std::string initialPort, bool runWizard)
     : service(service), config(config), logSink(std::move(logSink)), editor(config), settings(config),
-      selectedPort(std::move(initialPort)) {
+      wizard(service, config, detector), selectedPort(std::move(initialPort)) {
     refreshPorts(true);
+    if (runWizard) {
+        wizard.begin();
+    }
 }
 
 void MainView::applyIndicator(const core::PedalEvent& event) {
@@ -135,7 +138,31 @@ void MainView::applyIndicator(const core::PedalEvent& event) {
     }
 }
 
+void MainView::pollDetector() {
+    if (wizard.isActive()) {
+        return;
+    }
+
+    core::DetectionResult found;
+    if (!detector.take(found)) {
+        return;
+    }
+
+    if (found.found) {
+        selectedPort = found.port;
+        config.setPort(found.port);
+        refreshPorts(true);
+    }
+
+    if (serviceWasRunning && !selectedPort.empty()) {
+        service.start(selectedPort);
+    }
+    serviceWasRunning = false;
+}
+
 void MainView::pumpEvents() {
+    pollDetector();
+
     core::PedalEvent event;
     while (service.events().pop(event)) {
         if (event.type == core::PedalEventType::Pedal ||
@@ -206,9 +233,11 @@ void MainView::drawConnection() {
         preview = selectedPort.empty() ? "порты не найдены" : "[" + selectedPort + "]";
     }
 
-    const float buttonWidth = ImGui::CalcTextSize("Обновить список").x
-        + ImGui::GetStyle().FramePadding.x * 2.0f;
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonWidth
+    const float buttonsWidth = ImGui::CalcTextSize("Обновить список").x
+        + ImGui::CalcTextSize("Отменить поиск").x
+        + ImGui::GetStyle().FramePadding.x * 4.0f
+        + ImGui::GetStyle().ItemSpacing.x;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonsWidth
         - ImGui::GetStyle().ItemSpacing.x);
 
     if (ImGui::BeginCombo("##port", preview.c_str())) {
@@ -226,9 +255,30 @@ void MainView::drawConnection() {
     }
 
     ImGui::SameLine();
+    ImGui::BeginDisabled(detector.isRunning());
     if (ImGui::Button("Обновить список")) {
         refreshPorts(true);
     }
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    if (detector.isRunning()) {
+        if (ImGui::Button("Отменить поиск")) {
+            detector.cancel();
+        }
+    }
+    else if (ImGui::Button("Найти плату")) {
+        serviceWasRunning = service.isRunning();
+        service.stop();
+        service.join();
+        detector.start();
+    }
+
+    if (detector.isRunning()) {
+        ImGui::TextColored(colorPending, "%s", detector.status().c_str());
+    }
+
+    ImGui::BeginDisabled(detector.isRunning());
 
     if (running) {
         if (ImGui::Button("Отключить")) {
@@ -247,6 +297,8 @@ void MainView::drawConnection() {
         }
         ImGui::EndDisabled();
     }
+
+    ImGui::EndDisabled();
 
     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x * 2.0f);
     bool autoReconnect = service.autoReconnectEnabled();
@@ -409,6 +461,7 @@ void MainView::drawFooter() {
 }
 
 void MainView::draw() {
+    wizard.update();
     editor.update();
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -422,6 +475,12 @@ void MainView::draw() {
     const float footerHeight = config.isDirty()
         ? ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y * 2.0f
         : 0.0f;
+
+    if (wizard.isActive()) {
+        wizard.draw();
+        ImGui::End();
+        return;
+    }
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::BeginChild("content", ImVec2(0.0f, -footerHeight));

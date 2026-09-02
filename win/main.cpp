@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -114,10 +115,18 @@ int main(int argc, char** argv) {
         ui::printPortsList();
     }
 
-    const std::string iniFile = core::findConfigFile(parsed.options.iniPath);
+    std::string iniFile = core::findConfigFile(parsed.options.iniPath);
+    bool runWizard = false;
+
     if (iniFile.empty()) {
-        ui::showFatalMessage("Файл конфигурации не найден.\nРабота невозможна.");
-        return 1;
+        const std::string created =
+            (std::filesystem::path(core::dataDirectory()) / "pedal-buttons.ini").string();
+        if (!core::Config::createDefault(created)) {
+            ui::showFatalMessage("Не удалось создать файл конфигурации:\n" + created);
+            return 1;
+        }
+        iniFile = created;
+        runWizard = true;
     }
 
     core::PedalService service(iniFile);
@@ -158,13 +167,15 @@ int main(int argc, char** argv) {
     const std::string startPort = configuredPort.empty()
         ? "COM" + std::to_string(parsed.options.port)
         : configuredPort;
-    service.start(startPort);
+    if (!runWizard) {
+        service.start(startPort);
+    }
 
     ui::TrayIcon tray;
     const bool trayReady = uiConfig.useTray() && tray.create();
 
     bool windowVisible = true;
-    if (trayReady && uiConfig.startMinimized()) {
+    if (!runWizard && trayReady && uiConfig.startMinimized()) {
         windowVisible = false;
         window.setVisible(false);
     }
@@ -172,7 +183,7 @@ int main(int argc, char** argv) {
     tray.setIconVisible(trayReady &&
         !(uiConfig.hideTrayIconWithWindow() && windowVisible));
 
-    ui::MainView view(service, uiConfig, logSink, startPort);
+    ui::MainView view(service, uiConfig, logSink, startPort, runWizard);
 
     bool running = true;
     while (running) {

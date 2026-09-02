@@ -51,6 +51,24 @@ const std::vector<std::string>& Config::eventNames() {
     return names;
 }
 
+bool Config::createDefault(const std::string& filePath) {
+    IniDocument document;
+    document.set(settingsSection, "app", "default");
+    document.addSection("default");
+
+    for (const auto& event : eventNames()) {
+        document.set("default", event, "");
+    }
+
+    if (!document.save(filePath)) {
+        LOG_ERROR << "Не удалось создать конфиг: " << filePath;
+        return false;
+    }
+
+    LOG_INFO << "Создан конфиг по умолчанию: " << filePath;
+    return true;
+}
+
 bool Config::load(const std::string& path) {
     IniDocument loadedDocument;
     if (!loadedDocument.load(path)) {
