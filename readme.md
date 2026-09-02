@@ -6,7 +6,20 @@ The following are required to run the system:
 
 * An Arduino board (at least as capable as a Nano) flashed with `pedal-buttons/pedal-buttons.ino`
 * Button signals are received on pins 2 and 3
-* Build the console utility located in the `win/cli` folder and run it on the host machine, after connecting the Arduino via USB
+* Build the utility located in the `win` folder and run it on the host machine, after connecting the Arduino via USB
+
+## Building
+
+Requirements: Visual Studio 2022 with the C++ desktop workload (toolset v143). There are no external dependencies — everything needed is in the Windows SDK.
+
+Open `win/win.sln` and build the `Release|x64` configuration, or run `build.bat` from the project folder. The executable is written to the project folder as `pedal-buttons-<version>.exe`.
+
+Only `x64` is supported. Common compiler settings live in `win/common.props`. If a machine needs different paths or toolset settings, put them in `win/local.props` — it is imported automatically when present and is excluded from version control.
+
+Source layout:
+
+* `win/core` — serial port, port enumeration, config, key sending, logging. No UI dependencies.
+* `win/ui` — everything that talks to the user.
 
 ## CLI
 
@@ -33,10 +46,13 @@ RIGHT_HOLD = b
 
 Command line options:
 
-* `-i` or `--ini` - (**required**) Path to the .ini configuration file
+* `-i` or `--ini` - (optional) Path to the .ini configuration file
 * `-l` or `--list` - (optional) Show available serial ports
 * `-c` or `--portCount` - (optional, default 9) Number of ports to scan (from 1 to 20)
 * `-p` or `--port` - (optional, default 9) Port number to connect to (from 1 to portCount)
+* `-h` or `--help` - (optional) Show help
+
+Values may be given either as a separate argument (`-p 7`, `--port 7`) or attached (`-p7`, `--port=7`).
 
 If the file path is not specified, it will be searched for either in the launch folder (working directory) or next to the executable.
 

@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="core">
+      <UniqueIdentifier>{4f1c2d10-9a3b-4c5e-8f21-6b7d9e0a1c34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui">
+      <UniqueIdentifier>{7a2e5b41-3d6c-4e8a-9b10-2c4f6a8d5e79}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="core\Args.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\Config.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\IniParser.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\KeySender.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\Logger.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\Paths.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\PedalService.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\PortEnumerator.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\SerialPort.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\ConsoleFrontend.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="version.h" />
+    <ClInclude Include="core\Args.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\Config.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\IniParser.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\KeySender.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\Logger.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\Paths.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\PedalService.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\PortEnumerator.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\SerialPort.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\ConsoleFrontend.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="pedal-buttons.rc" />
+  </ItemGroup>
+</Project>
