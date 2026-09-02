@@ -23,6 +23,11 @@ public:
 
     bool shouldClose() const;
     void requestClose();
+    void clearCloseRequest();
+
+    bool isMinimized() const;
+    void restore();
+    void focus();
 
     void setVisible(bool visible);
     bool isVisible() const;

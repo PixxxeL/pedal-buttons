@@ -39,11 +39,13 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(MSBuildProjectDirectory)\common.props" />
-    <Import Project="$(MSBuildProjectDirectory)\version.props" Condition="Exists('$(MSBuildProjectDirectory)\version.props')" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <AppVersion Condition="'$(AppVersion)'==''">0.0.0</AppVersion>
+    <VersionHeaderPath>$(MSBuildProjectDirectory)\version.h</VersionHeaderPath>
+    <VersionHeaderText Condition="Exists('$(VersionHeaderPath)')">$([System.IO.File]::ReadAllText('$(VersionHeaderPath)'))</VersionHeaderText>
+    <AppVersion Condition="'$(VersionHeaderText)' != ''">$([System.Text.RegularExpressions.Regex]::Replace('$(VersionHeaderText)', '(?s)^.*?PEDAL_BUTTONS_VERSION\s+"([^"]*)".*$', '$1'))</AppVersion>
+    <AppVersion Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(AppVersion)', '^[0-9]+\.[0-9]+\.[0-9]+$'))">0.0.0</AppVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>pedal-buttons-$(AppVersion)-debug</TargetName>
@@ -73,9 +75,6 @@
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <PreBuildEvent>
-      <Command>powershell -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\ExtractVersion.ps1"</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -88,9 +87,6 @@
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
-    <PreBuildEvent>
-      <Command>powershell -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\ExtractVersion.ps1"</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -110,6 +106,10 @@
     <ClCompile Include="ui\ConsoleFrontend.cpp" />
     <ClCompile Include="ui\EditorView.cpp" />
     <ClCompile Include="ui\KeyCapture.cpp" />
+    <ClCompile Include="ui\Autostart.cpp" />
+    <ClCompile Include="ui\SettingsView.cpp" />
+    <ClCompile Include="ui\TrayIcon.cpp" />
+    <ClCompile Include="ui\Theme.cpp" />
     <ClCompile Include="ui\MainView.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -133,6 +133,10 @@
     <ClInclude Include="ui\ConsoleFrontend.h" />
     <ClInclude Include="ui\EditorView.h" />
     <ClInclude Include="ui\KeyCapture.h" />
+    <ClInclude Include="ui\Autostart.h" />
+    <ClInclude Include="ui\SettingsView.h" />
+    <ClInclude Include="ui\TrayIcon.h" />
+    <ClInclude Include="ui\Theme.h" />
     <ClInclude Include="ui\MainView.h" />
   </ItemGroup>
   <ItemGroup>

@@ -12,6 +12,8 @@
 #include "../core/PedalService.h"
 #include "../core/PortEnumerator.h"
 #include "EditorView.h"
+#include "SettingsView.h"
+#include "Theme.h"
 
 
 namespace ui {
@@ -37,7 +39,11 @@ public:
     void pumpEvents();
     void draw();
 
+    bool leftFlashing() const;
+    bool rightFlashing() const;
+
 private:
+    bool beginTab(int index, const char* label);
     void drawStatusTab();
     void drawFooter();
     void drawConnection();
@@ -53,6 +59,8 @@ private:
     core::Config& config;
     std::shared_ptr<core::MemorySink> logSink;
     EditorView editor;
+    SettingsView settings;
+    int selectedTab = 0;
 
     std::uint64_t logVersion = 0;
     std::vector<core::LogRecord> logRecords;

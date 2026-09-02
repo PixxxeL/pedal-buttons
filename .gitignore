@@ -2,6 +2,5 @@
 x64
 packages
 *.vcxproj.user
-version.props
 local.props
 *.log

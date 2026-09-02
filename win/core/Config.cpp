@@ -217,8 +217,8 @@ bool Config::autoReconnect() const {
 
 WindowGeometry Config::windowGeometry() const {
     WindowGeometry geometry;
-    geometry.x = toInt(document.get(settingsSection, "windowX"), 0);
-    geometry.y = toInt(document.get(settingsSection, "windowY"), 0);
+    geometry.x = toInt(document.get(settingsSection, "windowX"), WindowGeometry::unsetPosition);
+    geometry.y = toInt(document.get(settingsSection, "windowY"), WindowGeometry::unsetPosition);
     geometry.width = toInt(document.get(settingsSection, "windowWidth"), 0);
     geometry.height = toInt(document.get(settingsSection, "windowHeight"), 0);
     geometry.maximized = toBool(document.get(settingsSection, "windowMaximized"), false);
@@ -238,6 +238,79 @@ void Config::setAutoReconnect(bool value) {
         return;
     }
     document.set(settingsSection, "autoReconnect", value ? "true" : "false");
+    dirty = true;
+}
+
+
+bool Config::useTray() const {
+    return toBool(document.get(settingsSection, "tray"), true);
+}
+
+void Config::setUseTray(bool value) {
+    if (document.hasKey(settingsSection, "tray") && useTray() == value) {
+        return;
+    }
+    document.set(settingsSection, "tray", value ? "true" : "false");
+    dirty = true;
+}
+
+bool Config::minimizeToTray() const {
+    return toBool(document.get(settingsSection, "minimizeToTray"), true);
+}
+
+void Config::setMinimizeToTray(bool value) {
+    if (document.hasKey(settingsSection, "minimizeToTray") && minimizeToTray() == value) {
+        return;
+    }
+    document.set(settingsSection, "minimizeToTray", value ? "true" : "false");
+    dirty = true;
+}
+
+bool Config::closeToTray() const {
+    return toBool(document.get(settingsSection, "closeToTray"), true);
+}
+
+void Config::setCloseToTray(bool value) {
+    if (document.hasKey(settingsSection, "closeToTray") && closeToTray() == value) {
+        return;
+    }
+    document.set(settingsSection, "closeToTray", value ? "true" : "false");
+    dirty = true;
+}
+
+bool Config::hideTrayIconWithWindow() const {
+    return toBool(document.get(settingsSection, "hideTrayIconWithWindow"), false);
+}
+
+void Config::setHideTrayIconWithWindow(bool value) {
+    if (document.hasKey(settingsSection, "hideTrayIconWithWindow") && hideTrayIconWithWindow() == value) {
+        return;
+    }
+    document.set(settingsSection, "hideTrayIconWithWindow", value ? "true" : "false");
+    dirty = true;
+}
+
+bool Config::startMinimized() const {
+    return toBool(document.get(settingsSection, "startMinimized"), false);
+}
+
+void Config::setStartMinimized(bool value) {
+    if (document.hasKey(settingsSection, "startMinimized") && startMinimized() == value) {
+        return;
+    }
+    document.set(settingsSection, "startMinimized", value ? "true" : "false");
+    dirty = true;
+}
+
+bool Config::autostart() const {
+    return toBool(document.get(settingsSection, "autostart"), false);
+}
+
+void Config::setAutostart(bool value) {
+    if (document.hasKey(settingsSection, "autostart") && autostart() == value) {
+        return;
+    }
+    document.set(settingsSection, "autostart", value ? "true" : "false");
     dirty = true;
 }
 

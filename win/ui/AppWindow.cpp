@@ -12,6 +12,7 @@
 #include <string>
 
 #include "../core/Logger.h"
+#include "Theme.h"
 
 
 namespace fs = std::filesystem;
@@ -102,20 +103,38 @@ void loadFont(float scale) {
         0
     };
 
-    static const char* candidates[] = { "segoeui.ttf", "tahoma.ttf", "arial.ttf" };
-    for (const char* candidate : candidates) {
+    static const char* regular[] = { "segoeui.ttf", "tahoma.ttf", "arial.ttf" };
+    bool loaded = false;
+    for (const char* candidate : regular) {
         const std::string path = systemFontPath(candidate);
         if (path.empty()) {
             continue;
         }
         if (io.Fonts->AddFontFromFileTTF(path.c_str(), baseFontSize * scale,
                 nullptr, ranges) != nullptr) {
-            return;
+            loaded = true;
+            break;
         }
     }
 
-    LOG_WARNING << "Не найден системный шрифт с кириллицей, текст может отображаться неверно";
-    io.Fonts->AddFontDefault();
+    if (!loaded) {
+        LOG_WARNING << "Не найден системный шрифт с кириллицей, текст может отображаться неверно";
+        io.Fonts->AddFontDefault();
+        return;
+    }
+
+    static const char* boldFaces[] = { "segoeuib.ttf", "tahomabd.ttf", "arialbd.ttf" };
+    for (const char* candidate : boldFaces) {
+        const std::string path = systemFontPath(candidate);
+        if (path.empty()) {
+            continue;
+        }
+        if (ImFont* font = io.Fonts->AddFontFromFileTTF(path.c_str(), baseFontSize * scale,
+                nullptr, ranges)) {
+            setBoldFont(font);
+            break;
+        }
+    }
 }
 
 void applyStyle(float scale) {
@@ -164,12 +183,12 @@ void applyStyle(float scale) {
     colors[ImGuiCol_HeaderHovered] = ImVec4(0.204f, 0.522f, 0.420f, 0.80f);
     colors[ImGuiCol_HeaderActive] = ImVec4(0.227f, 0.584f, 0.467f, 0.90f);
 
-    colors[ImGuiCol_Tab] = ImVec4(0.086f, 0.094f, 0.110f, 1.00f);
-    colors[ImGuiCol_TabHovered] = ImVec4(0.153f, 0.180f, 0.212f, 1.00f);
-    colors[ImGuiCol_TabSelected] = ImVec4(0.105f, 0.117f, 0.137f, 1.00f);
+    colors[ImGuiCol_Tab] = ImVec4(0.051f, 0.058f, 0.070f, 1.00f);
+    colors[ImGuiCol_TabHovered] = ImVec4(0.129f, 0.145f, 0.173f, 1.00f);
+    colors[ImGuiCol_TabSelected] = ImVec4(0.078f, 0.086f, 0.102f, 1.00f);
     colors[ImGuiCol_TabSelectedOverline] = ImVec4(0.298f, 0.820f, 0.549f, 1.00f);
-    colors[ImGuiCol_TabDimmed] = ImVec4(0.086f, 0.094f, 0.110f, 1.00f);
-    colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.105f, 0.117f, 0.137f, 1.00f);
+    colors[ImGuiCol_TabDimmed] = ImVec4(0.051f, 0.058f, 0.070f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.078f, 0.086f, 0.102f, 1.00f);
     colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.180f, 0.200f, 0.231f, 1.00f);
 
     colors[ImGuiCol_CheckMark] = ImVec4(0.298f, 0.820f, 0.549f, 1.00f);
@@ -189,6 +208,25 @@ struct AppWindow::Impl {
     bool imguiReady = false;
     bool visible = true;
     float scale = 1.0f;
+    core::WindowGeometry lastKnown;
+
+    void capture() {
+        if (window == nullptr || !visible) {
+            return;
+        }
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE) {
+            return;
+        }
+
+        core::WindowGeometry current;
+        current.maximized = glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE;
+        glfwGetWindowPos(window, &current.x, &current.y);
+        glfwGetWindowSize(window, &current.width, &current.height);
+
+        if (current.hasSize()) {
+            lastKnown = current;
+        }
+    }
 };
 
 AppWindow::AppWindow() : impl(std::make_unique<Impl>()) {}
@@ -286,21 +324,8 @@ bool AppWindow::create(const std::string& title, const core::WindowGeometry& sav
 }
 
 core::WindowGeometry AppWindow::geometry() const {
-    core::WindowGeometry result;
-    if (impl->window == nullptr) {
-        return result;
-    }
-
-    result.maximized = glfwGetWindowAttrib(impl->window, GLFW_MAXIMIZED) == GLFW_TRUE;
-    glfwGetWindowPos(impl->window, &result.x, &result.y);
-    glfwGetWindowSize(impl->window, &result.width, &result.height);
-
-    if (result.width < minimumWidth || result.height < minimumHeight) {
-        result.width = 0;
-        result.height = 0;
-    }
-
-    return result;
+    impl->capture();
+    return impl->lastKnown;
 }
 
 void AppWindow::destroy() {
@@ -328,10 +353,37 @@ void AppWindow::requestClose() {
     }
 }
 
+void AppWindow::clearCloseRequest() {
+    if (impl->window != nullptr) {
+        glfwSetWindowShouldClose(impl->window, GLFW_FALSE);
+    }
+}
+
+bool AppWindow::isMinimized() const {
+    return impl->window != nullptr &&
+        glfwGetWindowAttrib(impl->window, GLFW_ICONIFIED) == GLFW_TRUE;
+}
+
+void AppWindow::restore() {
+    if (impl->window != nullptr) {
+        glfwRestoreWindow(impl->window);
+    }
+}
+
+void AppWindow::focus() {
+    if (impl->window != nullptr) {
+        glfwFocusWindow(impl->window);
+    }
+}
+
 void AppWindow::setVisible(bool visible) {
     if (impl->window == nullptr || impl->visible == visible) {
         return;
     }
+    if (!visible) {
+        impl->capture();
+    }
+
     impl->visible = visible;
     if (visible) {
         glfwShowWindow(impl->window);
@@ -360,6 +412,7 @@ void AppWindow::beginFrame() {
 }
 
 void AppWindow::endFrame() {
+    impl->capture();
     ImGui::Render();
 
     int width = 0;

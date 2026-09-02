@@ -115,7 +115,7 @@ bool toggleChip(const char* label, bool& value, const ImVec4& activeColor) {
 
 MainView::MainView(core::PedalService& service, core::Config& config,
         std::shared_ptr<core::MemorySink> logSink, std::string initialPort)
-    : service(service), config(config), logSink(std::move(logSink)), editor(config),
+    : service(service), config(config), logSink(std::move(logSink)), editor(config), settings(config),
       selectedPort(std::move(initialPort)) {
     refreshPorts(true);
 }
@@ -143,6 +143,14 @@ void MainView::pumpEvents() {
             applyIndicator(event);
         }
     }
+}
+
+bool MainView::leftFlashing() const {
+    return left.hasEvent && flashAmount(left.flashTime) > 0.0f;
+}
+
+bool MainView::rightFlashing() const {
+    return right.hasEvent && flashAmount(right.flashTime) > 0.0f;
 }
 
 void MainView::refreshLog() {
@@ -246,6 +254,12 @@ void MainView::drawConnection() {
         service.setAutoReconnect(autoReconnect);
         config.setAutoReconnect(autoReconnect);
     }
+
+    ImGui::SameLine();
+    bool paused = service.isPaused();
+    if (toggleChip("Пауза", paused, colorHold)) {
+        service.setPaused(paused);
+    }
 }
 
 void MainView::drawPedalCard(const char* id, const char* title,
@@ -343,6 +357,24 @@ void MainView::drawLog() {
     ImGui::EndChild();
 }
 
+bool MainView::beginTab(int index, const char* label) {
+    const bool selected = index == selectedTab;
+
+    pushBoldFont();
+    ImGui::PushStyleColor(ImGuiCol_Text,
+        selected ? ImGui::GetStyle().Colors[ImGuiCol_Text] : colorMuted);
+
+    const bool open = ImGui::BeginTabItem(label);
+
+    ImGui::PopStyleColor();
+    popBoldFont();
+
+    if (open) {
+        selectedTab = index;
+    }
+    return open;
+}
+
 void MainView::drawStatusTab() {
     ImGui::SeparatorText("Подключение");
     drawConnection();
@@ -391,15 +423,21 @@ void MainView::draw() {
         ? ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y * 2.0f
         : 0.0f;
 
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::BeginChild("content", ImVec2(0.0f, -footerHeight));
+    ImGui::PopStyleColor();
 
     if (ImGui::BeginTabBar("tabs")) {
-        if (ImGui::BeginTabItem("Состояние")) {
+        if (beginTab(0, "Состояние")) {
             drawStatusTab();
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Настройка")) {
+        if (beginTab(1, "Привязки")) {
             editor.draw();
+            ImGui::EndTabItem();
+        }
+        if (beginTab(2, "Приложение")) {
+            settings.draw();
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

@@ -35,7 +35,7 @@ const std::chrono::milliseconds reconnectDelays[] = {
 }
 
 PedalService::PedalService(std::string configPath)
-    : configPath(std::move(configPath)), running(false), connected(false), autoReconnect(true) {}
+    : configPath(std::move(configPath)), running(false), connected(false), autoReconnect(true), paused(false) {}
 
 PedalService::~PedalService() {
     stop();
@@ -116,8 +116,13 @@ void PedalService::handleLine(const std::string& line) {
         return;
     }
 
-    KeySender::send(keys);
-    LOG_INFO << "Отправка клавиш: " << event.detail;
+    if (paused) {
+        LOG_INFO << "Пауза, клавиши не отправлены: " << event.detail;
+    }
+    else {
+        KeySender::send(keys);
+        LOG_INFO << "Отправка клавиш: " << event.detail;
+    }
 
     event.type = PedalEventType::Pedal;
     emit(std::move(event));
@@ -143,6 +148,14 @@ void PedalService::setAutoReconnect(bool enabled) {
 
 bool PedalService::autoReconnectEnabled() const {
     return autoReconnect;
+}
+
+void PedalService::setPaused(bool value) {
+    paused = value;
+}
+
+bool PedalService::isPaused() const {
+    return paused;
 }
 
 void PedalService::start(const std::string& portName) {

@@ -29,6 +29,8 @@ public:
     void setNotifier(std::function<void()> notifier);
     void setAutoReconnect(bool enabled);
     bool autoReconnectEnabled() const;
+    void setPaused(bool value);
+    bool isPaused() const;
 
     void start(const std::string& portName);
     void stop();
@@ -60,6 +62,7 @@ private:
     std::atomic<bool> running;
     std::atomic<bool> connected;
     std::atomic<bool> autoReconnect;
+    std::atomic<bool> paused;
     std::function<void()> notifier;
     std::thread worker;
     EventQueue<PedalEvent> queue;

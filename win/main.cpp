@@ -11,7 +11,9 @@
 #include "core/SingleInstance.h"
 #include "ui/AppWindow.h"
 #include "ui/ConsoleFrontend.h"
+#include "ui/Autostart.h"
 #include "ui/MainView.h"
+#include "ui/TrayIcon.h"
 #include "version.h"
 
 
@@ -39,6 +41,32 @@ std::shared_ptr<core::MemorySink> initLogging(bool hasConsole) {
     }
 
     return memory;
+}
+
+ui::TrayState trayStateFor(const core::PedalService& service, bool leftFlash, bool rightFlash) {
+    if (service.isPaused()) {
+        return ui::TrayState::Paused;
+    }
+    if (!service.isConnected()) {
+        return ui::TrayState::Disconnected;
+    }
+    if (leftFlash) {
+        return ui::TrayState::LeftPressed;
+    }
+    if (rightFlash) {
+        return ui::TrayState::RightPressed;
+    }
+    return ui::TrayState::Connected;
+}
+
+std::string trayTooltipFor(const core::PedalService& service) {
+    if (service.isPaused()) {
+        return "Pedal Buttons — пауза";
+    }
+    if (service.isConnected()) {
+        return "Pedal Buttons — подключено к " + service.portName();
+    }
+    return "Pedal Buttons — не подключено";
 }
 
 void saveWindowGeometry(const std::string& configPath, const core::WindowGeometry& geometry) {
@@ -122,16 +150,84 @@ int main(int argc, char** argv) {
     service.setNotifier(&ui::AppWindow::wakeUp);
     service.setAutoReconnect(uiConfig.autoReconnect());
 
+    if (uiConfig.autostart() != ui::isAutostartEnabled()) {
+        ui::setAutostartEnabled(uiConfig.autostart());
+    }
+
     const std::string configuredPort = uiConfig.port();
     const std::string startPort = configuredPort.empty()
         ? "COM" + std::to_string(parsed.options.port)
         : configuredPort;
     service.start(startPort);
 
+    ui::TrayIcon tray;
+    const bool trayReady = uiConfig.useTray() && tray.create();
+
+    bool windowVisible = true;
+    if (trayReady && uiConfig.startMinimized()) {
+        windowVisible = false;
+        window.setVisible(false);
+    }
+    tray.setWindowVisible(windowVisible);
+    tray.setIconVisible(trayReady &&
+        !(uiConfig.hideTrayIconWithWindow() && windowVisible));
+
     ui::MainView view(service, uiConfig, logSink, startPort);
-    while (!window.shouldClose()) {
+
+    bool running = true;
+    while (running) {
         window.waitEvents();
         view.pumpEvents();
+
+        ui::TrayCommand command = ui::TrayCommand::None;
+        while (tray.poll(command)) {
+            if (command == ui::TrayCommand::Exit) {
+                running = false;
+            }
+            else if (command == ui::TrayCommand::TogglePause) {
+                service.setPaused(!service.isPaused());
+            }
+            else if (command == ui::TrayCommand::ShowWindow) {
+                windowVisible = true;
+            }
+            else if (command == ui::TrayCommand::ToggleWindow) {
+                windowVisible = !windowVisible;
+            }
+        }
+
+        if (window.shouldClose()) {
+            window.clearCloseRequest();
+            if (trayReady && uiConfig.closeToTray()) {
+                windowVisible = false;
+            }
+            else {
+                running = false;
+            }
+        }
+
+        if (trayReady && uiConfig.minimizeToTray() && window.isMinimized()) {
+            window.restore();
+            windowVisible = false;
+        }
+
+        if (windowVisible != window.isVisible()) {
+            window.setVisible(windowVisible);
+            if (windowVisible) {
+                window.focus();
+            }
+            tray.setWindowVisible(windowVisible);
+        }
+
+        if (trayReady) {
+            tray.setIconVisible(!(uiConfig.hideTrayIconWithWindow() && windowVisible));
+            tray.setPaused(service.isPaused());
+            tray.setState(trayStateFor(service, view.leftFlashing(), view.rightFlashing()),
+                trayTooltipFor(service));
+        }
+
+        if (!running) {
+            break;
+        }
 
         if (window.isVisible()) {
             window.beginFrame();
@@ -141,6 +237,7 @@ int main(int argc, char** argv) {
     }
 
     saveWindowGeometry(iniFile, window.geometry());
+    tray.destroy();
 
     service.stop();
     service.join();

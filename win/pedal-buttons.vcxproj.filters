@@ -58,6 +58,18 @@
     <ClCompile Include="ui\KeyCapture.cpp">
       <Filter>ui</Filter>
     </ClCompile>
+    <ClCompile Include="ui\Autostart.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\SettingsView.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\TrayIcon.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\Theme.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
     <ClCompile Include="ui\MainView.cpp">
       <Filter>ui</Filter>
     </ClCompile>
@@ -119,6 +131,18 @@
       <Filter>ui</Filter>
     </ClInclude>
     <ClInclude Include="ui\KeyCapture.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\Autostart.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\SettingsView.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\TrayIcon.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\Theme.h">
       <Filter>ui</Filter>
     </ClInclude>
     <ClInclude Include="ui\MainView.h">

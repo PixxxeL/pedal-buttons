@@ -42,6 +42,19 @@ public:
     WindowGeometry windowGeometry() const;
     void setWindowGeometry(const WindowGeometry& geometry);
 
+    bool useTray() const;
+    void setUseTray(bool value);
+    bool minimizeToTray() const;
+    void setMinimizeToTray(bool value);
+    bool closeToTray() const;
+    void setCloseToTray(bool value);
+    bool hideTrayIconWithWindow() const;
+    void setHideTrayIconWithWindow(bool value);
+    bool startMinimized() const;
+    void setStartMinimized(bool value);
+    bool autostart() const;
+    void setAutostart(bool value);
+
 private:
     IniDocument document;
     std::string filePath;

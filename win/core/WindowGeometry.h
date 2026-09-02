@@ -1,11 +1,15 @@
 #pragma once
 
+#include <climits>
+
 
 namespace core {
 
 struct WindowGeometry {
-    int x = 0;
-    int y = 0;
+    static constexpr int unsetPosition = INT_MIN;
+
+    int x = unsetPosition;
+    int y = unsetPosition;
     int width = 0;
     int height = 0;
     bool maximized = false;
@@ -15,7 +19,7 @@ struct WindowGeometry {
     }
 
     bool hasPosition() const {
-        return x != 0 || y != 0;
+        return x != unsetPosition && y != unsetPosition;
     }
 };
 
