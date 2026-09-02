@@ -96,7 +96,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="core\Args.cpp" />
     <ClCompile Include="core\Config.cpp" />
-    <ClCompile Include="core\IniParser.cpp" />
+    <ClCompile Include="core\IniDocument.cpp" />
+    <ClCompile Include="core\KeyBinding.cpp" />
     <ClCompile Include="core\KeySender.cpp" />
     <ClCompile Include="core\LineAssembler.cpp" />
     <ClCompile Include="core\Logger.cpp" />
@@ -107,13 +108,16 @@
     <ClCompile Include="core\SingleInstance.cpp" />
     <ClCompile Include="ui\AppWindow.cpp" />
     <ClCompile Include="ui\ConsoleFrontend.cpp" />
+    <ClCompile Include="ui\EditorView.cpp" />
+    <ClCompile Include="ui\KeyCapture.cpp" />
     <ClCompile Include="ui\MainView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="version.h" />
     <ClInclude Include="core\Args.h" />
     <ClInclude Include="core\Config.h" />
-    <ClInclude Include="core\IniParser.h" />
+    <ClInclude Include="core\IniDocument.h" />
+    <ClInclude Include="core\KeyBinding.h" />
     <ClInclude Include="core\EventQueue.h" />
     <ClInclude Include="core\KeySender.h" />
     <ClInclude Include="core\LineAssembler.h" />
@@ -123,9 +127,12 @@
     <ClInclude Include="core\PedalService.h" />
     <ClInclude Include="core\PortEnumerator.h" />
     <ClInclude Include="core\SerialPort.h" />
+    <ClInclude Include="core\WindowGeometry.h" />
     <ClInclude Include="core\SingleInstance.h" />
     <ClInclude Include="ui\AppWindow.h" />
     <ClInclude Include="ui\ConsoleFrontend.h" />
+    <ClInclude Include="ui\EditorView.h" />
+    <ClInclude Include="ui\KeyCapture.h" />
     <ClInclude Include="ui\MainView.h" />
   </ItemGroup>
   <ItemGroup>

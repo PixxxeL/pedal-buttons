@@ -41,6 +41,20 @@ std::shared_ptr<core::MemorySink> initLogging(bool hasConsole) {
     return memory;
 }
 
+void saveWindowGeometry(const std::string& configPath, const core::WindowGeometry& geometry) {
+    if (!geometry.hasSize()) {
+        return;
+    }
+
+    core::Config stored;
+    if (!stored.load(configPath)) {
+        return;
+    }
+
+    stored.setWindowGeometry(geometry);
+    stored.save();
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -85,6 +99,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    core::Config uiConfig;
+    uiConfig.load(iniFile);
+
     const core::SingleInstance instance("pedal-buttons");
     if (!instance.acquired()) {
         LOG_ERROR << "Приложение уже запущено. Второй экземпляр займёт тот же COM-порт.";
@@ -93,7 +110,7 @@ int main(int argc, char** argv) {
     }
 
     ui::AppWindow window;
-    if (!window.create("Pedal Buttons " PEDAL_BUTTONS_VERSION, 720, 520)) {
+    if (!window.create("Pedal Buttons " PEDAL_BUTTONS_VERSION, uiConfig.windowGeometry())) {
         ui::showFatalMessage("Не удалось создать окно приложения.");
         return 1;
     }
@@ -103,11 +120,15 @@ int main(int argc, char** argv) {
     });
 
     service.setNotifier(&ui::AppWindow::wakeUp);
+    service.setAutoReconnect(uiConfig.autoReconnect());
 
-    const std::string startPort = "COM" + std::to_string(parsed.options.port);
+    const std::string configuredPort = uiConfig.port();
+    const std::string startPort = configuredPort.empty()
+        ? "COM" + std::to_string(parsed.options.port)
+        : configuredPort;
     service.start(startPort);
 
-    ui::MainView view(service, logSink, startPort);
+    ui::MainView view(service, uiConfig, logSink, startPort);
     while (!window.shouldClose()) {
         window.waitEvents();
         view.pumpEvents();
@@ -118,6 +139,8 @@ int main(int argc, char** argv) {
             window.endFrame();
         }
     }
+
+    saveWindowGeometry(iniFile, window.geometry());
 
     service.stop();
     service.join();

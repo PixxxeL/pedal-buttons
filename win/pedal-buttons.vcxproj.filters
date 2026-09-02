@@ -16,7 +16,10 @@
     <ClCompile Include="core\Config.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="core\IniParser.cpp">
+    <ClCompile Include="core\IniDocument.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\KeyBinding.cpp">
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="core\KeySender.cpp">
@@ -49,6 +52,12 @@
     <ClCompile Include="ui\ConsoleFrontend.cpp">
       <Filter>ui</Filter>
     </ClCompile>
+    <ClCompile Include="ui\EditorView.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\KeyCapture.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
     <ClCompile Include="ui\MainView.cpp">
       <Filter>ui</Filter>
     </ClCompile>
@@ -61,7 +70,10 @@
     <ClInclude Include="core\Config.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="core\IniParser.h">
+    <ClInclude Include="core\IniDocument.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\KeyBinding.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\EventQueue.h">
@@ -77,6 +89,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\Logger.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\WindowGeometry.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\SingleInstance.h">
@@ -98,6 +113,12 @@
       <Filter>ui</Filter>
     </ClInclude>
     <ClInclude Include="ui\ConsoleFrontend.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\EditorView.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\KeyCapture.h">
       <Filter>ui</Filter>
     </ClInclude>
     <ClInclude Include="ui\MainView.h">

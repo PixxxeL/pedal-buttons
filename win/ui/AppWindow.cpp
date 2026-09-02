@@ -7,6 +7,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <string>
 
@@ -22,6 +23,58 @@ namespace {
 constexpr double visibleWaitSeconds = 1.0 / 30.0;
 constexpr double hiddenWaitSeconds = 0.2;
 constexpr float baseFontSize = 16.0f;
+
+constexpr int defaultWidth = 720;
+constexpr int defaultHeight = 520;
+constexpr int minimumWidth = 480;
+constexpr int minimumHeight = 360;
+constexpr int maximumSide = 16384;
+constexpr int minimumVisibleWidth = 140;
+constexpr int minimumVisibleHeight = 40;
+
+bool isPositionUsable(int x, int y, int width, int height) {
+    int count = 0;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+    if (monitors == nullptr || count == 0) {
+        return false;
+    }
+
+    for (int i = 0; i < count; i++) {
+        int areaX = 0;
+        int areaY = 0;
+        int areaWidth = 0;
+        int areaHeight = 0;
+        glfwGetMonitorWorkarea(monitors[i], &areaX, &areaY, &areaWidth, &areaHeight);
+
+        const int left = (std::max)(x, areaX);
+        const int top = (std::max)(y, areaY);
+        const int right = (std::min)(x + width, areaX + areaWidth);
+        const int bottom = (std::min)(y + height, areaY + areaHeight);
+
+        if (right - left >= minimumVisibleWidth && bottom - top >= minimumVisibleHeight) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void centerOnPrimaryMonitor(GLFWwindow* window, int width, int height) {
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    if (monitor == nullptr) {
+        return;
+    }
+
+    int areaX = 0;
+    int areaY = 0;
+    int areaWidth = 0;
+    int areaHeight = 0;
+    glfwGetMonitorWorkarea(monitor, &areaX, &areaY, &areaWidth, &areaHeight);
+
+    glfwSetWindowPos(window,
+        areaX + (std::max)(0, (areaWidth - width) / 2),
+        areaY + (std::max)(0, (areaHeight - height) / 2));
+}
 
 void glfwErrorCallback(int code, const char* description) {
     LOG_ERROR << "GLFW: " << description << " (код " << code << ")";
@@ -111,6 +164,14 @@ void applyStyle(float scale) {
     colors[ImGuiCol_HeaderHovered] = ImVec4(0.204f, 0.522f, 0.420f, 0.80f);
     colors[ImGuiCol_HeaderActive] = ImVec4(0.227f, 0.584f, 0.467f, 0.90f);
 
+    colors[ImGuiCol_Tab] = ImVec4(0.086f, 0.094f, 0.110f, 1.00f);
+    colors[ImGuiCol_TabHovered] = ImVec4(0.153f, 0.180f, 0.212f, 1.00f);
+    colors[ImGuiCol_TabSelected] = ImVec4(0.105f, 0.117f, 0.137f, 1.00f);
+    colors[ImGuiCol_TabSelectedOverline] = ImVec4(0.298f, 0.820f, 0.549f, 1.00f);
+    colors[ImGuiCol_TabDimmed] = ImVec4(0.086f, 0.094f, 0.110f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.105f, 0.117f, 0.137f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.180f, 0.200f, 0.231f, 1.00f);
+
     colors[ImGuiCol_CheckMark] = ImVec4(0.298f, 0.820f, 0.549f, 1.00f);
     colors[ImGuiCol_Separator] = ImVec4(0.180f, 0.200f, 0.231f, 1.00f);
     colors[ImGuiCol_ScrollbarBg] = ImVec4(0.086f, 0.094f, 0.110f, 1.00f);
@@ -136,7 +197,7 @@ AppWindow::~AppWindow() {
     destroy();
 }
 
-bool AppWindow::create(const std::string& title, int width, int height) {
+bool AppWindow::create(const std::string& title, const core::WindowGeometry& saved) {
     glfwSetErrorCallback(glfwErrorCallback);
 
     if (!glfwInit()) {
@@ -155,14 +216,46 @@ bool AppWindow::create(const std::string& title, int width, int height) {
     }
     impl->scale = scaleX > 0.0f ? scaleX : 1.0f;
 
-    impl->window = glfwCreateWindow(
-        static_cast<int>(width * impl->scale),
-        static_cast<int>(height * impl->scale),
-        title.c_str(), nullptr, nullptr);
+    int width = static_cast<int>(defaultWidth * impl->scale);
+    int height = static_cast<int>(defaultHeight * impl->scale);
+
+    const int minWidth = static_cast<int>(minimumWidth * impl->scale);
+    const int minHeight = static_cast<int>(minimumHeight * impl->scale);
+
+    if (saved.hasSize()) {
+        if (saved.width >= minWidth && saved.height >= minHeight &&
+            saved.width <= maximumSide && saved.height <= maximumSide) {
+            width = saved.width;
+            height = saved.height;
+        }
+        else {
+            LOG_WARNING << "Сохранённый размер окна " << saved.width << "x" << saved.height
+                << " недопустим, используется размер по умолчанию";
+        }
+    }
+
+    impl->window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     if (impl->window == nullptr) {
         LOG_ERROR << "Не удалось создать окно";
         glfwTerminate();
         return false;
+    }
+
+    glfwSetWindowSizeLimits(impl->window, minWidth, minHeight, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
+    if (saved.hasPosition() && isPositionUsable(saved.x, saved.y, width, height)) {
+        glfwSetWindowPos(impl->window, saved.x, saved.y);
+    }
+    else {
+        if (saved.hasPosition()) {
+            LOG_WARNING << "Сохранённая позиция окна " << saved.x << "," << saved.y
+                << " вне видимой области, окно ставится по центру";
+        }
+        centerOnPrimaryMonitor(impl->window, width, height);
+    }
+
+    if (saved.maximized) {
+        glfwMaximizeWindow(impl->window);
     }
 
     glfwMakeContextCurrent(impl->window);
@@ -190,6 +283,24 @@ bool AppWindow::create(const std::string& title, int width, int height) {
     impl->imguiReady = true;
     impl->visible = true;
     return true;
+}
+
+core::WindowGeometry AppWindow::geometry() const {
+    core::WindowGeometry result;
+    if (impl->window == nullptr) {
+        return result;
+    }
+
+    result.maximized = glfwGetWindowAttrib(impl->window, GLFW_MAXIMIZED) == GLFW_TRUE;
+    glfwGetWindowPos(impl->window, &result.x, &result.y);
+    glfwGetWindowSize(impl->window, &result.width, &result.height);
+
+    if (result.width < minimumWidth || result.height < minimumHeight) {
+        result.width = 0;
+        result.height = 0;
+    }
+
+    return result;
 }
 
 void AppWindow::destroy() {

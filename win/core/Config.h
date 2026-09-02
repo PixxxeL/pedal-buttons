@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-#include "IniParser.h"
+#include "IniDocument.h"
+#include "KeyBinding.h"
+#include "WindowGeometry.h"
 
 
 namespace core {
@@ -14,13 +16,39 @@ public:
     static const std::vector<std::string>& eventNames();
 
     bool load(const std::string& filePath);
-    const std::string& getAppName() const;
-    std::vector<std::string> getKeys(const std::string& event) const;
+    bool reload();
+    bool save();
+    bool isLoaded() const;
+    bool isDirty() const;
+    std::uint64_t generation() const;
+    const std::string& path() const;
+
+    std::vector<std::string> profileNames() const;
+    const std::string& activeProfile() const;
+    void setActiveProfile(const std::string& name);
+    void addProfile(const std::string& name);
+    void removeProfile(const std::string& name);
+
+    KeySequence binding(const std::string& event) const;
+    KeySequence binding(const std::string& profile, const std::string& event) const;
+    void setBinding(const std::string& profile, const std::string& event, const KeySequence& keys);
+
+    std::string port() const;
+    void setPort(const std::string& value);
+
+    bool autoReconnect() const;
+    void setAutoReconnect(bool value);
+
+    WindowGeometry windowGeometry() const;
+    void setWindowGeometry(const WindowGeometry& geometry);
 
 private:
-    IniParser ini;
-    std::string appName;
-    std::unordered_map<std::string, std::vector<std::string>> bindings;
+    IniDocument document;
+    std::string filePath;
+    std::string profile;
+    bool loaded = false;
+    bool dirty = false;
+    std::uint64_t revision = 0;
 };
 
 }

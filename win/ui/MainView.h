@@ -6,10 +6,12 @@
 #include <string>
 #include <vector>
 
+#include "../core/Config.h"
 #include "../core/Logger.h"
 #include "../core/PedalEvent.h"
 #include "../core/PedalService.h"
 #include "../core/PortEnumerator.h"
+#include "EditorView.h"
 
 
 namespace ui {
@@ -29,13 +31,15 @@ struct PedalIndicator {
 
 class MainView {
 public:
-    MainView(core::PedalService& service, std::shared_ptr<core::MemorySink> logSink,
-        std::string initialPort);
+    MainView(core::PedalService& service, core::Config& config,
+        std::shared_ptr<core::MemorySink> logSink, std::string initialPort);
 
     void pumpEvents();
     void draw();
 
 private:
+    void drawStatusTab();
+    void drawFooter();
     void drawConnection();
     void drawIndicators();
     void drawPedalCard(const char* id, const char* title, const PedalIndicator& indicator, float width);
@@ -46,7 +50,9 @@ private:
     void applyIndicator(const core::PedalEvent& event);
 
     core::PedalService& service;
+    core::Config& config;
     std::shared_ptr<core::MemorySink> logSink;
+    EditorView editor;
 
     std::uint64_t logVersion = 0;
     std::vector<core::LogRecord> logRecords;

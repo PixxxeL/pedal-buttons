@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "../core/KeySender.h"
 
 
 namespace ui {
@@ -114,9 +113,10 @@ bool toggleChip(const char* label, bool& value, const ImVec4& activeColor) {
 
 }
 
-MainView::MainView(core::PedalService& service, std::shared_ptr<core::MemorySink> logSink,
-        std::string initialPort)
-    : service(service), logSink(std::move(logSink)), selectedPort(std::move(initialPort)) {
+MainView::MainView(core::PedalService& service, core::Config& config,
+        std::shared_ptr<core::MemorySink> logSink, std::string initialPort)
+    : service(service), config(config), logSink(std::move(logSink)), editor(config),
+      selectedPort(std::move(initialPort)) {
     refreshPorts(true);
 }
 
@@ -208,6 +208,7 @@ void MainView::drawConnection() {
             const bool selected = port.name == selectedPort;
             if (ImGui::Selectable(portLabel(port).c_str(), selected)) {
                 selectedPort = port.name;
+                config.setPort(selectedPort);
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
@@ -243,6 +244,7 @@ void MainView::drawConnection() {
     bool autoReconnect = service.autoReconnectEnabled();
     if (toggleChip("Переподключаться автоматически", autoReconnect, colorOnline)) {
         service.setAutoReconnect(autoReconnect);
+        config.setAutoReconnect(autoReconnect);
     }
 }
 
@@ -276,8 +278,7 @@ void MainView::drawPedalCard(const char* id, const char* title,
             ImGui::TextColored(colorMuted, "%s, нет привязки", kind);
         }
         else {
-            ImGui::TextColored(accent, "%s -> %s", kind,
-                core::KeySender::describe(indicator.event.keys).c_str());
+            ImGui::TextColored(accent, "%s -> %s", kind, indicator.event.detail.c_str());
         }
         ImGui::TextColored(colorMuted, "%s", describeAge(indicator.event.time).c_str());
     }
@@ -342,15 +343,7 @@ void MainView::drawLog() {
     ImGui::EndChild();
 }
 
-void MainView::draw() {
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(viewport->WorkPos);
-    ImGui::SetNextWindowSize(viewport->WorkSize);
-
-    ImGui::Begin("##main", nullptr,
-        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
-
+void MainView::drawStatusTab() {
     ImGui::SeparatorText("Подключение");
     drawConnection();
 
@@ -359,6 +352,62 @@ void MainView::draw() {
 
     ImGui::SeparatorText("Журнал");
     drawLog();
+}
+
+void MainView::drawFooter() {
+    if (!config.isDirty()) {
+        return;
+    }
+
+    ImGui::Separator();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextColored(colorPending, "Есть несохранённые изменения");
+
+    ImGui::SameLine();
+    if (ImGui::Button("Сохранить")) {
+        config.save();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Отменить")) {
+        config.reload();
+        selectedPort = config.port().empty() ? selectedPort : config.port();
+        service.setAutoReconnect(config.autoReconnect());
+    }
+}
+
+void MainView::draw() {
+    editor.update();
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+
+    ImGui::Begin("##main", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    const float footerHeight = config.isDirty()
+        ? ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y * 2.0f
+        : 0.0f;
+
+    ImGui::BeginChild("content", ImVec2(0.0f, -footerHeight));
+
+    if (ImGui::BeginTabBar("tabs")) {
+        if (ImGui::BeginTabItem("Состояние")) {
+            drawStatusTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Настройка")) {
+            editor.draw();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+
+    ImGui::EndChild();
+
+    drawFooter();
 
     ImGui::End();
 }

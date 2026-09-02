@@ -4,11 +4,15 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <thread>
 
 
 namespace core {
 
 namespace {
+
+constexpr std::chrono::milliseconds chordGap{20};
 
 INPUT makeKeyInput(WORD virtualKey, DWORD flags) {
     INPUT input = {};
@@ -18,10 +22,29 @@ INPUT makeKeyInput(WORD virtualKey, DWORD flags) {
     return input;
 }
 
-bool isModifier(const std::string& key) {
+bool isModifierKey(const std::string& key) {
     return key == "ctrl" || key == "control" ||
         key == "alt" || key == "menu" ||
         key == "shift";
+}
+
+const std::unordered_map<int, std::string>& canonicalNames() {
+    static const std::unordered_map<int, std::string> names = {
+        {VK_CONTROL, "ctrl"}, {VK_LCONTROL, "ctrl"}, {VK_RCONTROL, "ctrl"},
+        {VK_MENU, "alt"}, {VK_LMENU, "alt"}, {VK_RMENU, "alt"},
+        {VK_SHIFT, "shift"}, {VK_LSHIFT, "shift"}, {VK_RSHIFT, "shift"},
+        {VK_SPACE, "space"}, {VK_RETURN, "enter"}, {VK_TAB, "tab"},
+        {VK_ESCAPE, "esc"}, {VK_BACK, "backspace"}, {VK_DELETE, "delete"},
+        {VK_LEFT, "left"}, {VK_RIGHT, "right"}, {VK_UP, "up"}, {VK_DOWN, "down"},
+        {VK_HOME, "home"}, {VK_END, "end"},
+        {VK_PRIOR, "pageup"}, {VK_NEXT, "pagedown"},
+        {VK_F1, "f1"}, {VK_F2, "f2"}, {VK_F3, "f3"}, {VK_F4, "f4"},
+        {VK_F5, "f5"}, {VK_F6, "f6"}, {VK_F7, "f7"}, {VK_F8, "f8"},
+        {VK_F9, "f9"}, {VK_F10, "f10"}, {VK_F11, "f11"}, {VK_F12, "f12"},
+        {VK_INSERT, "insert"}, {VK_SNAPSHOT, "print"},
+        {VK_CAPITAL, "capslock"}, {VK_NUMLOCK, "numlock"}, {VK_SCROLL, "scrolllock"},
+    };
+    return names;
 }
 
 std::string toLower(const std::string& text) {
@@ -57,18 +80,39 @@ const std::unordered_map<std::string, int>& KeySender::getKeyMap() {
     return keyMap;
 }
 
-std::string KeySender::describe(const std::vector<std::string>& keys) {
-    std::string result;
-    for (std::size_t i = 0; i < keys.size(); i++) {
-        if (i > 0) {
-            result += "+";
-        }
-        result += keys[i];
+std::string KeySender::nameForVirtualKey(int virtualKey) {
+    const auto& names = canonicalNames();
+    const auto it = names.find(virtualKey);
+    if (it != names.end()) {
+        return it->second;
     }
-    return result;
+
+    if ((virtualKey >= '0' && virtualKey <= '9') || (virtualKey >= 'A' && virtualKey <= 'Z')) {
+        return std::string(1, static_cast<char>(std::tolower(virtualKey)));
+    }
+
+    const UINT character = MapVirtualKeyA(static_cast<UINT>(virtualKey), MAPVK_VK_TO_CHAR) & 0x7FFF;
+    if (character >= 0x20 && character < 0x7F) {
+        return std::string(1, static_cast<char>(std::tolower(static_cast<int>(character))));
+    }
+
+    return "";
 }
 
-void KeySender::send(const std::vector<std::string>& keys) {
+bool KeySender::isModifierName(const std::string& key) {
+    return isModifierKey(toLower(key));
+}
+
+void KeySender::send(const KeySequence& sequence) {
+    for (std::size_t i = 0; i < sequence.size(); i++) {
+        if (i > 0) {
+            std::this_thread::sleep_for(chordGap);
+        }
+        sendChord(sequence[i]);
+    }
+}
+
+void KeySender::sendChord(const KeyChord& keys) {
     if (keys.empty()) {
         return;
     }
@@ -82,7 +126,7 @@ void KeySender::send(const std::vector<std::string>& keys) {
         const std::string lowered = toLower(key);
         const auto it = keyMap.find(lowered);
         if (it != keyMap.end()) {
-            if (isModifier(lowered)) {
+            if (isModifierKey(lowered)) {
                 modifiers.push_back(static_cast<WORD>(it->second));
             }
             else {

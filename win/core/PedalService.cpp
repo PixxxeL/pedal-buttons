@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "KeyBinding.h"
 #include "KeySender.h"
 #include "LineAssembler.h"
 #include "Logger.h"
@@ -50,7 +51,7 @@ bool PedalService::loadConfig() {
     configWriteTime = fs::last_write_time(configPath, error);
     lastConfigCheck = std::chrono::steady_clock::now();
 
-    LOG_INFO << "Загружен конфиг: " << configPath << ", приложение: " << config.getAppName();
+    LOG_INFO << "Загружен конфиг: " << configPath << ", профиль: " << config.activeProfile();
     return true;
 }
 
@@ -76,7 +77,7 @@ void PedalService::reloadConfigIfChanged() {
 
     config = std::move(updated);
     configWriteTime = writeTime;
-    LOG_INFO << "Конфиг перечитан, приложение: " << config.getAppName();
+    LOG_INFO << "Конфиг перечитан, профиль: " << config.activeProfile();
 }
 
 std::string PedalService::toEventKey(const std::string& line) {
@@ -102,13 +103,13 @@ void PedalService::handleLine(const std::string& line) {
     LOG_DEBUG << "Пакет от Arduino: " << line;
 
     const std::string eventKey = toEventKey(line);
-    const auto keys = config.getKeys(eventKey);
+    const KeySequence keys = config.binding(eventKey);
 
     PedalEvent event;
     event.name = eventKey;
-    event.keys = keys;
+    event.detail = formatKeySequence(keys);
 
-    if (keys.empty()) {
+    if (isEmpty(keys)) {
         LOG_WARNING << "Неизвестное событие или нет привязки: " << line;
         event.type = PedalEventType::Unknown;
         emit(std::move(event));
@@ -116,7 +117,7 @@ void PedalService::handleLine(const std::string& line) {
     }
 
     KeySender::send(keys);
-    LOG_INFO << "Отправка клавиш: " << KeySender::describe(keys);
+    LOG_INFO << "Отправка клавиш: " << event.detail;
 
     event.type = PedalEventType::Pedal;
     emit(std::move(event));
@@ -250,7 +251,7 @@ void PedalService::workerLoop() {
             }
         }
         else {
-            const std::string failure = serialPort.lastError();
+            std::string failure = serialPort.lastError();
             if (failure != lastFailure) {
                 LOG_ERROR << "На порту " << port << " невозможно подключиться к Arduino: " << failure;
                 lastFailure = failure;
@@ -262,7 +263,7 @@ void PedalService::workerLoop() {
             PedalEvent problem;
             problem.type = PedalEventType::Failure;
             problem.name = port;
-            problem.keys = { failure };
+            problem.detail = std::move(failure);
             emit(std::move(problem));
         }
 

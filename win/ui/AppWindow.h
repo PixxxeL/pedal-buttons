@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include "../core/WindowGeometry.h"
+
 
 namespace ui {
 
@@ -14,8 +16,10 @@ public:
     AppWindow(const AppWindow&) = delete;
     AppWindow& operator=(const AppWindow&) = delete;
 
-    bool create(const std::string& title, int width, int height);
+    bool create(const std::string& title, const core::WindowGeometry& saved);
     void destroy();
+
+    core::WindowGeometry geometry() const;
 
     bool shouldClose() const;
     void requestClose();
