@@ -2,7 +2,9 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
+#include <mutex>
 #include <functional>
 #include <string>
 #include <thread>
@@ -40,6 +42,7 @@ public:
     bool isRunning() const;
     bool isConnected() const;
     const std::string& portName() const;
+    std::string activeProfileName() const;
 
     EventQueue<PedalEvent>& events();
 
@@ -49,6 +52,8 @@ private:
     void workerLoop();
     bool runSession(SerialPort& serialPort);
     void reloadConfigIfChanged();
+    void updateActiveProfile();
+    void publishProfile();
     void handleLine(const std::string& line);
     void emit(PedalEvent event);
     bool sleepWhileRunning(std::chrono::milliseconds duration);
@@ -58,6 +63,11 @@ private:
     Config config;
     std::filesystem::file_time_type configWriteTime;
     std::chrono::steady_clock::time_point lastConfigCheck;
+    std::chrono::steady_clock::time_point lastProfileCheck;
+    std::uintptr_t lastForeground = 0;
+
+    mutable std::mutex profileMutex;
+    std::string currentProfile;
 
     std::atomic<bool> running;
     std::atomic<bool> connected;

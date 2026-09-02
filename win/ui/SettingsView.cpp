@@ -92,6 +92,17 @@ void SettingsView::draw() {
         }
     }
 
+    ImGui::SeparatorText("Профили");
+
+    const bool autoProfile = checkbox("Переключать профиль по активному окну", config.autoProfile());
+    if (autoProfile != config.autoProfile()) {
+        config.setAutoProfile(autoProfile);
+    }
+
+    ImGui::TextColored(colorMuted,
+        "Профиль выбирается по правилу окна: в фокусе Reaper — профиль reaper, "
+        "в фокусе VLC — vlc. Если ни одно правило не совпало, профиль остаётся прежним.");
+
     ImGui::SeparatorText("Файлы");
 
     ImGui::TextColored(colorMuted, "Конфигурация: %s", config.path().c_str());

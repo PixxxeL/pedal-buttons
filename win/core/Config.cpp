@@ -165,6 +165,13 @@ void Config::setActiveProfile(const std::string& name) {
     dirty = true;
 }
 
+void Config::useProfile(const std::string& name) {
+    if (name.empty() || !document.hasSection(name)) {
+        return;
+    }
+    profile = name;
+}
+
 void Config::addProfile(const std::string& name) {
     const std::string trimmed = IniDocument::trim(name);
     if (trimmed.empty() || isSettingsSection(trimmed) || document.hasSection(trimmed)) {
@@ -291,6 +298,18 @@ void Config::setAutoReconnect(bool value) {
     dirty = true;
 }
 
+
+bool Config::autoProfile() const {
+    return toBool(document.get(settingsSection, "autoProfile"), false);
+}
+
+void Config::setAutoProfile(bool value) {
+    if (document.hasKey(settingsSection, "autoProfile") && autoProfile() == value) {
+        return;
+    }
+    document.set(settingsSection, "autoProfile", value ? "true" : "false");
+    dirty = true;
+}
 
 bool Config::useTray() const {
     return toBool(document.get(settingsSection, "tray"), true);

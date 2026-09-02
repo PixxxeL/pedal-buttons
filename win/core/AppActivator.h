@@ -25,6 +25,8 @@ enum class ActivationResult {
 };
 
 std::vector<WindowInfo> listWindows();
+WindowInfo foregroundWindow();
+bool windowMatches(const WindowInfo& window, const std::string& rule);
 
 std::uintptr_t findWindow(const std::string& rule);
 bool activateWindow(std::uintptr_t handle);

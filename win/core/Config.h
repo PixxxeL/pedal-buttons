@@ -27,6 +27,7 @@ public:
     std::vector<std::string> profileNames() const;
     const std::string& activeProfile() const;
     void setActiveProfile(const std::string& name);
+    void useProfile(const std::string& name);
     void addProfile(const std::string& name);
     void removeProfile(const std::string& name);
 
@@ -61,6 +62,8 @@ public:
     void setHideTrayIconWithWindow(bool value);
     bool startMinimized() const;
     void setStartMinimized(bool value);
+    bool autoProfile() const;
+    void setAutoProfile(bool value);
     bool autostart() const;
     void setAutostart(bool value);
 

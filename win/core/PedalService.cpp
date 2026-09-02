@@ -26,6 +26,7 @@ namespace {
 constexpr std::size_t readBufferSize = 256;
 const char* firmwareId = "pedal-buttons";
 constexpr std::chrono::milliseconds configCheckInterval{1000};
+constexpr std::chrono::milliseconds profileCheckInterval{400};
 constexpr std::chrono::milliseconds sleepSlice{100};
 
 const std::chrono::milliseconds reconnectDelays[] = {
@@ -53,8 +54,52 @@ bool PedalService::loadConfig() {
     configWriteTime = fs::last_write_time(configPath, error);
     lastConfigCheck = std::chrono::steady_clock::now();
 
+    publishProfile();
     LOG_INFO << "Загружен конфиг: " << configPath << ", профиль: " << config.activeProfile();
     return true;
+}
+
+void PedalService::publishProfile() {
+    std::lock_guard<std::mutex> lock(profileMutex);
+    currentProfile = config.activeProfile();
+}
+
+std::string PedalService::activeProfileName() const {
+    std::lock_guard<std::mutex> lock(profileMutex);
+    return currentProfile;
+}
+
+void PedalService::updateActiveProfile() {
+    if (!config.autoProfile()) {
+        return;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    if (now - lastProfileCheck < profileCheckInterval) {
+        return;
+    }
+    lastProfileCheck = now;
+
+    const WindowInfo current = foregroundWindow();
+    if (current.handle == 0 || current.handle == lastForeground) {
+        return;
+    }
+    lastForeground = current.handle;
+
+    for (const auto& name : config.profileNames()) {
+        const std::string rule = config.windowMatch(name);
+        if (rule.empty() || !windowMatches(current, rule)) {
+            continue;
+        }
+
+        if (config.activeProfile() != name) {
+            config.useProfile(name);
+            publishProfile();
+            LOG_INFO << "Профиль переключён на " << name << " по активному окну: "
+                << (current.process.empty() ? current.title : current.process);
+        }
+        return;
+    }
 }
 
 void PedalService::reloadConfigIfChanged() {
@@ -79,6 +124,8 @@ void PedalService::reloadConfigIfChanged() {
 
     config = std::move(updated);
     configWriteTime = writeTime;
+    lastForeground = 0;
+    publishProfile();
     LOG_INFO << "Конфиг перечитан, профиль: " << config.activeProfile();
 }
 
@@ -255,6 +302,7 @@ bool PedalService::runSession(SerialPort& serialPort) {
         }
 
         reloadConfigIfChanged();
+        updateActiveProfile();
     }
 
     return clean;

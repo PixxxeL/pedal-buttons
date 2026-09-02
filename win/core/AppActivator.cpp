@@ -87,6 +87,25 @@ std::string processInfo(HWND window, std::string& fullPath) {
     return name;
 }
 
+WindowInfo describeWindow(HWND window) {
+    WindowInfo info;
+    if (window == nullptr) {
+        return info;
+    }
+
+    wchar_t title[512] = { 0 };
+    const int titleLength = GetWindowTextW(window, title, static_cast<int>(std::size(title)));
+
+    wchar_t className[256] = { 0 };
+    GetClassNameW(window, className, static_cast<int>(std::size(className)));
+
+    info.handle = reinterpret_cast<std::uintptr_t>(window);
+    info.title = titleLength > 0 ? toUtf8(std::wstring(title, titleLength)) : "";
+    info.className = toUtf8(std::wstring(className));
+    info.process = processInfo(window, info.path);
+    return info;
+}
+
 BOOL CALLBACK collectWindow(HWND window, LPARAM parameter) {
     auto* windows = reinterpret_cast<std::vector<WindowInfo>*>(parameter);
 
@@ -96,23 +115,11 @@ BOOL CALLBACK collectWindow(HWND window, LPARAM parameter) {
     if ((GetWindowLongPtrW(window, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) {
         return TRUE;
     }
-
-    wchar_t title[512] = { 0 };
-    const int titleLength = GetWindowTextW(window, title, static_cast<int>(std::size(title)));
-    if (titleLength <= 0) {
+    if (GetWindowTextLengthW(window) <= 0) {
         return TRUE;
     }
 
-    wchar_t className[256] = { 0 };
-    GetClassNameW(window, className, static_cast<int>(std::size(className)));
-
-    WindowInfo info;
-    info.handle = reinterpret_cast<std::uintptr_t>(window);
-    info.title = toUtf8(std::wstring(title, titleLength));
-    info.className = toUtf8(std::wstring(className));
-    info.process = processInfo(window, info.path);
-
-    windows->push_back(std::move(info));
+    windows->push_back(describeWindow(window));
     return TRUE;
 }
 
@@ -158,6 +165,14 @@ bool waitForForeground(HWND target) {
     return GetForegroundWindow() == target;
 }
 
+}
+
+WindowInfo foregroundWindow() {
+    return describeWindow(GetForegroundWindow());
+}
+
+bool windowMatches(const WindowInfo& window, const std::string& rule) {
+    return matches(window, rule);
 }
 
 std::vector<WindowInfo> listWindows() {

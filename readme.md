@@ -69,6 +69,8 @@ The left side of a binding accepts only the four event names above. On the right
 
 `exe` is optional and only used when no matching window exists: the application is started instead. Leaving `match` empty keeps the old behaviour — keys go to whatever window currently has focus.
 
+When **Приложение → Профили → «Переключать профиль по активному окну»** is enabled, the active profile follows the focused window: focus Reaper and the `reaper` profile applies, switch to VLC and `vlc` does. Matching uses the same `match` rules, so nothing extra needs to be configured. When no rule matches the focused window, the current profile stays — so the pedal keeps working after you tab away to a browser.
+
 Both fields are easier to fill from the interface: **Привязки → Целевое приложение → Выбрать из запущенных** lists open windows and fills them in.
 
 Command line options:

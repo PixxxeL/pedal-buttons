@@ -220,6 +220,17 @@ void MainView::drawConnection() {
         ImGui::TextUnformatted("Не подключено");
     }
 
+    const std::string profile = service.activeProfileName();
+    if (!profile.empty()) {
+        ImGui::SameLine();
+        if (config.autoProfile()) {
+            ImGui::TextColored(colorMuted, "|  профиль %s (по активному окну)", profile.c_str());
+        }
+        else {
+            ImGui::TextColored(colorMuted, "|  профиль %s", profile.c_str());
+        }
+    }
+
     refreshPorts(false);
 
     std::string preview;
