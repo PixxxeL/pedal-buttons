@@ -301,9 +301,14 @@ std::string makeMatchRule(const WindowInfo& window) {
     if (!window.process.empty()) {
         return "process:" + window.process;
     }
+
     if (!window.className.empty()) {
+        LOG_WARNING << "Имя процесса недоступно (возможно, приложение запущено от администратора),"
+            << " правило составлено по классу окна: " << window.className;
         return "class:" + window.className;
     }
+
+    LOG_WARNING << "Имя процесса и класс окна недоступны, правило составлено по заголовку";
     return "title:" + window.title;
 }
 

@@ -259,7 +259,11 @@ void WizardView::finish() {
     }
 
     config.save();
-    LOG_INFO << "Первоначальная настройка завершена";
+
+    LOG_INFO << "Настройка сохранена. Порт: "
+        << (selectedPort.empty() ? "не выбран" : selectedPort)
+        << ", окно: " << (selectedWindow.empty() ? "не выбрано" : selectedWindow)
+        << ", приложение: " << (selectedExecutable.empty() ? "не задано" : selectedExecutable);
 
     if (!selectedPort.empty()) {
         service.start(selectedPort);
@@ -291,12 +295,11 @@ void WizardView::drawNavigation() {
     }
 
     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x * 2.0f);
-    if (ImGui::Button("Настроить позже")) {
-        config.save();
-        if (!selectedPort.empty()) {
-            service.start(selectedPort);
-        }
-        active = false;
+    if (ImGui::Button("Закрыть настройку")) {
+        finish();
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Сохраняет то, что уже выбрано, и закрывает мастер");
     }
 }
 
