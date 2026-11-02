@@ -11,9 +11,6 @@
     <GlfwDir Condition="'$(GlfwDir)' == ''">$(DepsDir)\glfw</GlfwDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
-    <BuildLog>
-      <Path>$(IntDir)msbuild.log</Path>
-    </BuildLog>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>

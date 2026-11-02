@@ -149,5 +149,10 @@
     <ResourceCompile Include="pedal-buttons.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ItemDefinitionGroup>
+    <BuildLog>
+      <Path>$(IntDir)msbuild.log</Path>
+    </BuildLog>
+  </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionTargets" />
 </Project>

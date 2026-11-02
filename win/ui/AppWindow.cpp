@@ -393,6 +393,21 @@ void AppWindow::setVisible(bool visible) {
     }
 }
 
+void AppWindow::present() {
+    if (impl->window == nullptr) {
+        return;
+    }
+
+    impl->visible = true;
+    glfwShowWindow(impl->window);
+
+    if (glfwGetWindowAttrib(impl->window, GLFW_ICONIFIED) == GLFW_TRUE) {
+        glfwRestoreWindow(impl->window);
+    }
+
+    glfwFocusWindow(impl->window);
+}
+
 bool AppWindow::isVisible() const {
     return impl->visible;
 }

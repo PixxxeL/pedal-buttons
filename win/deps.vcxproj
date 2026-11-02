@@ -100,4 +100,9 @@
     <Error Condition="!Exists('$(GlfwDir)\src\context.c')" Text="GLFW не найден в $(GlfwDir). Положи исходники GLFW туда или задай GlfwDir в win\local.props." />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ItemDefinitionGroup>
+    <BuildLog>
+      <Path>$(IntDir)msbuild.log</Path>
+    </BuildLog>
+  </ItemDefinitionGroup>
 </Project>

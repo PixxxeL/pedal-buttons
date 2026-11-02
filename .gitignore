@@ -4,3 +4,4 @@ packages
 *.vcxproj.user
 local.props
 *.log
+*.aps

@@ -1,3 +1,3 @@
 #pragma once
 
-#define PEDAL_BUTTONS_VERSION "2.0.0"
+#define PEDAL_BUTTONS_VERSION "2.0.1"

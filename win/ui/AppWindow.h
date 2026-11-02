@@ -30,6 +30,7 @@ public:
     void focus();
 
     void setVisible(bool visible);
+    void present();
     bool isVisible() const;
 
     void waitEvents();

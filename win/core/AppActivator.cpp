@@ -154,6 +154,15 @@ bool matches(const WindowInfo& window, const std::string& rule) {
     return lower(window.process) == lower(value);
 }
 
+bool belongsToThisProcess(HWND window) {
+    if (window == nullptr) {
+        return false;
+    }
+    DWORD processId = 0;
+    GetWindowThreadProcessId(window, &processId);
+    return processId == GetCurrentProcessId();
+}
+
 bool waitForForeground(HWND target) {
     const auto deadline = std::chrono::steady_clock::now() + foregroundTimeout;
     while (std::chrono::steady_clock::now() < deadline) {
@@ -223,9 +232,13 @@ bool activateWindow(std::uintptr_t handle) {
         ? GetWindowThreadProcessId(foreground, nullptr)
         : 0;
 
-    const bool attachForeground = foregroundThread != 0 && foregroundThread != thisThread;
+    const bool ownForeground = belongsToThisProcess(foreground);
+    const bool ownTarget = belongsToThisProcess(target);
+
+    const bool attachForeground = foregroundThread != 0 && foregroundThread != thisThread
+        && !ownForeground;
     const bool attachTarget = targetThread != 0 && targetThread != thisThread
-        && targetThread != foregroundThread;
+        && targetThread != foregroundThread && !ownTarget;
 
     if (attachForeground) {
         AttachThreadInput(thisThread, foregroundThread, TRUE);

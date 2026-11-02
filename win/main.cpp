@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -19,6 +20,8 @@
 
 
 namespace {
+
+constexpr std::chrono::seconds shutdownTimeout{3};
 
 std::shared_ptr<core::MemorySink> initLogging(bool hasConsole) {
     if (hasConsole) {
@@ -186,6 +189,8 @@ int main(int argc, char** argv) {
     ui::MainView view(service, uiConfig, logSink, startPort, runWizard);
 
     bool running = true;
+    bool presentRequested = false;
+
     while (running) {
         window.waitEvents();
         view.pumpEvents();
@@ -200,9 +205,11 @@ int main(int argc, char** argv) {
             }
             else if (command == ui::TrayCommand::ShowWindow) {
                 windowVisible = true;
+                presentRequested = true;
             }
             else if (command == ui::TrayCommand::ToggleWindow) {
                 windowVisible = !windowVisible;
+                presentRequested = windowVisible;
             }
         }
 
@@ -216,17 +223,21 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (trayReady && uiConfig.minimizeToTray() && window.isMinimized()) {
+        if (trayReady && uiConfig.minimizeToTray() && window.isVisible()
+            && window.isMinimized() && !presentRequested) {
             window.restore();
             windowVisible = false;
         }
 
         if (windowVisible != window.isVisible()) {
             window.setVisible(windowVisible);
-            if (windowVisible) {
-                window.focus();
-            }
             tray.setWindowVisible(windowVisible);
+        }
+
+        if (presentRequested) {
+            window.present();
+            tray.setWindowVisible(true);
+            presentRequested = false;
         }
 
         if (trayReady) {
@@ -247,10 +258,16 @@ int main(int argc, char** argv) {
         }
     }
 
+    service.stop();
+
+    const auto shutdownDeadline = std::chrono::steady_clock::now() + shutdownTimeout;
+    while (service.isRunning() && std::chrono::steady_clock::now() < shutdownDeadline) {
+        window.waitEvents();
+    }
+
     saveWindowGeometry(iniFile, window.geometry());
     tray.destroy();
 
-    service.stop();
     service.join();
     window.destroy();
 
