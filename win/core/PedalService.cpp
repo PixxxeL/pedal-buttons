@@ -28,6 +28,8 @@ const char* firmwareId = "pedal-buttons";
 constexpr std::chrono::milliseconds configCheckInterval{1000};
 constexpr std::chrono::milliseconds profileCheckInterval{400};
 constexpr std::chrono::milliseconds sleepSlice{100};
+constexpr std::chrono::milliseconds pingInterval{1000};
+constexpr uint8_t pingByte = '!';
 
 const std::chrono::milliseconds reconnectDelays[] = {
     std::chrono::milliseconds{1000},
@@ -283,6 +285,7 @@ bool PedalService::runSession(SerialPort& serialPort) {
     std::vector<uint8_t> buffer(readBufferSize);
     std::string line;
     bool clean = true;
+    auto lastPing = std::chrono::steady_clock::now();
 
     while (running && serialPort.isConnected()) {
         std::size_t bytesRead = 0;
@@ -298,6 +301,16 @@ bool PedalService::runSession(SerialPort& serialPort) {
             assembler.append(buffer.data(), bytesRead);
             while (assembler.next(line)) {
                 handleLine(line);
+            }
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        if (now - lastPing >= pingInterval) {
+            lastPing = now;
+            if (!serialPort.write(&pingByte, 1)) {
+                LOG_ERROR << "Ошибка записи в порт " << port << ": " << serialPort.lastError();
+                clean = false;
+                break;
             }
         }
 

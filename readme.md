@@ -14,6 +14,8 @@ The sketch polls both pins without blocking and reports four events over the ser
 
 On start the board announces itself with a line such as `pedal-buttons 1.1.0`, and repeats that line whenever it receives a `?` character. This lets the host recognise the board among the serial ports of the system.
 
+An RGB LED (common anode) on PWM pins 9 (red), 10 (green) and 11 (blue) lights up while a button is down: the left one shows cyan and turns blue once the hold threshold passes, the right one shows yellow and turns orange. With no button down the LED glows faint red when the board is merely powered, and green while the host application is connected: the application sends a `!` character every second, and the board treats 3 seconds of silence as a disconnect.
+
 The firmware carries its own version, unrelated to the version of the host application: a board keeps whatever was flashed onto it while the application is updated independently. The host only looks at the `pedal-buttons` prefix to identify the board and never compares versions, so an application update never orphans an already flashed board.
 
 ## Building
