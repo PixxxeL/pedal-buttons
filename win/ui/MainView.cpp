@@ -13,6 +13,7 @@ namespace {
 
 constexpr std::chrono::milliseconds flashDuration{300};
 constexpr std::chrono::milliseconds portScanInterval{2000};
+constexpr std::chrono::milliseconds mouseHoldThreshold{750};
 
 const ImVec4 colorClick(0.298f, 0.820f, 0.549f, 1.00f);
 const ImVec4 colorHold(0.980f, 0.682f, 0.220f, 1.00f);
@@ -325,8 +326,8 @@ void MainView::drawConnection() {
     }
 }
 
-void MainView::drawPedalCard(const char* id, const char* title,
-        const PedalIndicator& indicator, float width) {
+void MainView::drawPedalCard(const char* id, const char* title, const char* eventPrefix,
+        const PedalIndicator& indicator, MousePress& press, float width) {
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImVec4 accent = indicator.kind == FlashKind::Hold ? colorHold : colorClick;
     const float amount = indicator.hasEvent ? flashAmount(indicator.flashTime) : 0.0f;
@@ -344,6 +345,39 @@ void MainView::drawPedalCard(const char* id, const char* title,
 
     ImGui::BeginChild(id, size, ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
 
+    const ImVec2 origin = ImGui::GetCursorPos();
+    const bool enabled = service.isRunning();
+
+    ImGui::BeginDisabled(!enabled);
+    const bool clicked = ImGui::InvisibleButton("hit", ImGui::GetContentRegionAvail());
+    const bool hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
+    const auto now = std::chrono::steady_clock::now();
+
+    if (ImGui::IsItemActivated()) {
+        press.since = now;
+        press.holdFired = false;
+    }
+    if (ImGui::IsItemActive() && !press.holdFired && now - press.since >= mouseHoldThreshold) {
+        press.holdFired = true;
+        service.injectEvent(std::string(eventPrefix) + "-hold");
+    }
+    if (clicked && !press.holdFired) {
+        service.injectEvent(std::string(eventPrefix) + "-click");
+    }
+    ImGui::EndDisabled();
+
+    if (hovered) {
+        if (enabled) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            ImGui::SetTooltip("Клик мышью — как клик педалью, удержание дольше %lld мс — как удержание",
+                static_cast<long long>(mouseHoldThreshold.count()));
+        }
+        else {
+            ImGui::SetTooltip("Нажатия мышью доступны, когда чтение порта запущено");
+        }
+    }
+
+    ImGui::SetCursorPos(origin);
     ImGui::TextUnformatted(title);
 
     if (!indicator.hasEvent) {
@@ -369,9 +403,9 @@ void MainView::drawPedalCard(const char* id, const char* title,
 void MainView::drawIndicators() {
     const float width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 
-    drawPedalCard("##left", "Левая педаль", left, width);
+    drawPedalCard("##left", "Левая педаль", "left", left, leftPress, width);
     ImGui::SameLine();
-    drawPedalCard("##right", "Правая педаль", right, width);
+    drawPedalCard("##right", "Правая педаль", "right", right, rightPress, width);
 }
 
 void MainView::drawLog() {

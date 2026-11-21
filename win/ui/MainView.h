@@ -33,6 +33,11 @@ struct PedalIndicator {
     bool hasEvent = false;
 };
 
+struct MousePress {
+    std::chrono::steady_clock::time_point since;
+    bool holdFired = false;
+};
+
 class MainView {
 public:
     MainView(core::PedalService& service, core::Config& config,
@@ -50,7 +55,8 @@ private:
     void drawFooter();
     void drawConnection();
     void drawIndicators();
-    void drawPedalCard(const char* id, const char* title, const PedalIndicator& indicator, float width);
+    void drawPedalCard(const char* id, const char* title, const char* eventPrefix,
+        const PedalIndicator& indicator, MousePress& press, float width);
     void drawLog();
 
     void refreshLog();
@@ -79,6 +85,8 @@ private:
 
     PedalIndicator left;
     PedalIndicator right;
+    MousePress leftPress;
+    MousePress rightPress;
 };
 
 }

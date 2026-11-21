@@ -22,6 +22,7 @@ namespace {
 constexpr std::chrono::milliseconds foregroundTimeout{400};
 constexpr std::chrono::milliseconds foregroundPollStep{10};
 constexpr std::chrono::milliseconds settleDelay{40};
+constexpr UINT windowTextTimeoutMs = 100;
 
 std::string toUtf8(const std::wstring& text) {
     if (text.empty()) {
@@ -61,6 +62,15 @@ bool contains(const std::string& haystack, const std::string& needle) {
     return lower(haystack).find(lower(needle)) != std::string::npos;
 }
 
+bool belongsToThisProcess(HWND window) {
+    if (window == nullptr) {
+        return false;
+    }
+    DWORD processId = 0;
+    GetWindowThreadProcessId(window, &processId);
+    return processId == GetCurrentProcessId();
+}
+
 std::string processInfo(HWND window, std::string& fullPath) {
     DWORD processId = 0;
     GetWindowThreadProcessId(window, &processId);
@@ -87,20 +97,33 @@ std::string processInfo(HWND window, std::string& fullPath) {
     return name;
 }
 
+std::wstring windowTitle(HWND window) {
+    wchar_t buffer[512] = { 0 };
+    DWORD_PTR handled = 0;
+
+    const LRESULT sent = SendMessageTimeoutW(window, WM_GETTEXT,
+        static_cast<WPARAM>(std::size(buffer)), reinterpret_cast<LPARAM>(buffer),
+        SMTO_ABORTIFHUNG, windowTextTimeoutMs, &handled);
+
+    if (sent == 0) {
+        return L"";
+    }
+
+    buffer[std::size(buffer) - 1] = L'\0';
+    return std::wstring(buffer);
+}
+
 WindowInfo describeWindow(HWND window) {
     WindowInfo info;
     if (window == nullptr) {
         return info;
     }
 
-    wchar_t title[512] = { 0 };
-    const int titleLength = GetWindowTextW(window, title, static_cast<int>(std::size(title)));
-
     wchar_t className[256] = { 0 };
     GetClassNameW(window, className, static_cast<int>(std::size(className)));
 
     info.handle = reinterpret_cast<std::uintptr_t>(window);
-    info.title = titleLength > 0 ? toUtf8(std::wstring(title, titleLength)) : "";
+    info.title = toUtf8(windowTitle(window));
     info.className = toUtf8(std::wstring(className));
     info.process = processInfo(window, info.path);
     return info;
@@ -115,11 +138,16 @@ BOOL CALLBACK collectWindow(HWND window, LPARAM parameter) {
     if ((GetWindowLongPtrW(window, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) {
         return TRUE;
     }
-    if (GetWindowTextLengthW(window) <= 0) {
+    if (belongsToThisProcess(window)) {
         return TRUE;
     }
 
-    windows->push_back(describeWindow(window));
+    WindowInfo info = describeWindow(window);
+    if (info.title.empty()) {
+        return TRUE;
+    }
+
+    windows->push_back(std::move(info));
     return TRUE;
 }
 
@@ -154,15 +182,6 @@ bool matches(const WindowInfo& window, const std::string& rule) {
     return lower(window.process) == lower(value);
 }
 
-bool belongsToThisProcess(HWND window) {
-    if (window == nullptr) {
-        return false;
-    }
-    DWORD processId = 0;
-    GetWindowThreadProcessId(window, &processId);
-    return processId == GetCurrentProcessId();
-}
-
 bool waitForForeground(HWND target) {
     const auto deadline = std::chrono::steady_clock::now() + foregroundTimeout;
     while (std::chrono::steady_clock::now() < deadline) {
@@ -177,7 +196,11 @@ bool waitForForeground(HWND target) {
 }
 
 WindowInfo foregroundWindow() {
-    return describeWindow(GetForegroundWindow());
+    HWND window = GetForegroundWindow();
+    if (belongsToThisProcess(window)) {
+        return WindowInfo();
+    }
+    return describeWindow(window);
 }
 
 bool windowMatches(const WindowInfo& window, const std::string& rule) {

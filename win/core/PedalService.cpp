@@ -158,7 +158,23 @@ void PedalService::handleLine(const std::string& line) {
         return;
     }
 
-    const std::string eventKey = toEventKey(line);
+    processEvent(toEventKey(line));
+}
+
+void PedalService::injectEvent(const std::string& eventName) {
+    injected.push(eventName);
+}
+
+void PedalService::drainInjected() {
+    std::string eventName;
+    while (injected.pop(eventName)) {
+        const std::string eventKey = toEventKey(eventName);
+        LOG_DEBUG << "Событие из интерфейса: " << eventKey;
+        processEvent(eventKey);
+    }
+}
+
+void PedalService::processEvent(const std::string& eventKey) {
     const KeySequence keys = config.binding(eventKey);
 
     PedalEvent event;
@@ -166,7 +182,7 @@ void PedalService::handleLine(const std::string& line) {
     event.detail = formatKeySequence(keys);
 
     if (isEmpty(keys)) {
-        LOG_WARNING << "Неизвестное событие или нет привязки: " << line;
+        LOG_WARNING << "Неизвестное событие или нет привязки: " << eventKey;
         event.type = PedalEventType::Unknown;
         emit(std::move(event));
         return;
@@ -213,6 +229,7 @@ bool PedalService::sleepWhileRunning(std::chrono::milliseconds duration) {
         const auto step = (std::min)(sleepSlice, duration - slept);
         std::this_thread::sleep_for(step);
         slept += step;
+        drainInjected();
     }
     return running;
 }
@@ -314,6 +331,7 @@ bool PedalService::runSession(SerialPort& serialPort) {
             }
         }
 
+        drainInjected();
         reloadConfigIfChanged();
         updateActiveProfile();
     }

@@ -1,6 +1,7 @@
 #include <windows.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -267,6 +268,12 @@ int main(int argc, char** argv) {
 
     saveWindowGeometry(iniFile, window.geometry());
     tray.destroy();
+
+    if (service.isRunning()) {
+        LOG_ERROR << "Поток чтения не завершился за " << shutdownTimeout.count()
+            << " с, выходим принудительно";
+        std::_Exit(1);
+    }
 
     service.join();
     window.destroy();

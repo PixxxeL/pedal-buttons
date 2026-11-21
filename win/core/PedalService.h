@@ -44,6 +44,8 @@ public:
     const std::string& portName() const;
     std::string activeProfileName() const;
 
+    void injectEvent(const std::string& eventName);
+
     EventQueue<PedalEvent>& events();
 
 private:
@@ -55,6 +57,8 @@ private:
     void updateActiveProfile();
     void publishProfile();
     void handleLine(const std::string& line);
+    void processEvent(const std::string& eventKey);
+    void drainInjected();
     void emit(PedalEvent event);
     bool sleepWhileRunning(std::chrono::milliseconds duration);
 
@@ -76,6 +80,7 @@ private:
     std::function<void()> notifier;
     std::thread worker;
     EventQueue<PedalEvent> queue;
+    EventQueue<std::string> injected;
 };
 
 }
